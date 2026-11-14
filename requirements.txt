@@ -1,0 +1,12 @@
+# Earth Data Detectives · Python 3.11 or newer
+streamlit>=1.67
+pandas>=2.2
+numpy>=1.26
+scipy>=1.13
+statsmodels>=0.14.4
+pymannkendall>=1.4.3
+plotly>=5.24
+folium>=0.17
+requests>=2.32
+pytest>=8.3
+# Only to rebuild data/region from INEGI (scripts/preparar_region.py): pip install pyshp shapely

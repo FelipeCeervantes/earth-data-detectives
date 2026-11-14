@@ -1,0 +1,34 @@
+# Identidad "Expediente de campo" (ver docs/marca.md). Sin logos ni colores de la NASA.
+# Los mismos valores viven en src/estilo.py; si cambias uno, cambia el otro.
+[theme]
+base = "light"
+primaryColor = "#1B2430"               # tinta: controles, pestaña activa
+backgroundColor = "#F5F0E6"            # papel
+secondaryBackgroundColor = "#EFE8DA"   # campos sobre papel
+textColor = "#1B2430"                  # tinta
+linkColor = "#1B2430"
+borderColor = "#D9CFBD"                # línea
+showWidgetBorder = true
+baseRadius = "0.25rem"
+font = "Atkinson Hyperlegible:https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap"
+headingFont = "Fraunces:https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..800&display=swap"
+codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap"
+headingFontWeights = 650
+metricValueFontSize = "2rem"
+
+[theme.sidebar]
+backgroundColor = "#1B2430"            # panel del detective (tinta)
+secondaryBackgroundColor = "#26303D"
+textColor = "#F5F0E6"
+primaryColor = "#E09F3E"               # señal
+linkColor = "#E09F3E"
+borderColor = "#3A4554"
+
+[client]
+toolbarMode = "viewer"   # sin el botón "Deploy" ni menús de desarrollador
+
+[server]
+headless = true
+
+[browser]
+gatherUsageStats = false
