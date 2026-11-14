@@ -32,11 +32,19 @@ ZONAS: dict[str, dict] = {
 }
 
 
-def obtener_zona(id_zona: str) -> dict:
-    """Regresa la zona con ese id. ValueError si no existe."""
+NOMBRES_EN = {"los-altos": "Whole region", "altos-norte": "Altos Norte", "altos-sur": "Altos Sur"}
+
+
+def obtener_zona(id_zona: str, idioma: str = "es") -> dict:
+    """Regresa la zona con ese id, con su nombre en el idioma pedido (en/es). ValueError si no existe."""
     if id_zona not in ZONAS:
         raise ValueError(f"La zona '{id_zona}' no existe. Usa una de: {', '.join(ZONAS)}.")
-    return copy.deepcopy(ZONAS[id_zona])
+    if idioma not in ("en", "es"):
+        raise ValueError(f"Idioma no válido: '{idioma}'. Usa 'en' o 'es'.")
+    zona = copy.deepcopy(ZONAS[id_zona])
+    if idioma == "en":
+        zona["nombre"] = NOMBRES_EN[id_zona]
+    return zona
 
 
 @lru_cache(maxsize=1)

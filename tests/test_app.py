@@ -41,9 +41,15 @@ def falsos(monkeypatch):
                         raising=False)
 
 
-def correr() -> AppTest:
+def correr(idioma: str = "es") -> AppTest:
+    """Corre la app (abre en inglés) y, si se pide, cambia a español con el botón ES.
+
+    Las pruebas que revisan textos en español usan "es"; las de la versión para los jueces, "en".
+    """
     at = AppTest.from_file(APP, default_timeout=120)
     at.run()
+    if idioma != "en":
+        at.radio(key="idioma").set_value(idioma).run()
     return at
 
 
@@ -106,7 +112,7 @@ def test_sequia_spi_3_y_6():
     assert "Qué no es" in textos(sequia.markdown)
     at.radio(key="escala_spi").set_value(3).run()
     assert not at.exception
-    assert " de " in at.tabs[2].metric[0].value
+    assert " / " in at.tabs[2].metric[0].value
 
 
 def test_humedad_con_las_tres_capas():
@@ -206,3 +212,58 @@ def test_ultimos_5_anios_se_lee_bien():
         assert evidencia.label == "Evidencia 02 · Últimos 5 años"
         assert evidencia.value.endswith(f"meses en {palabra}")
         assert "Desde enero de 2020 hasta diciembre de 2024." in textos(pestana.caption)
+
+
+
+# --- Inglés (lo que ven los jueces) ---------------------------------------------------------
+RASTROS_ES = ["¿Qué significa?", "Evidencia ", "Fuente y limitaciones", "Veredicto", "Fuentes del expediente",
+              "Panel del detective", " por década", "Resumen en palabras", "Toda la región", "Caso Nº",
+              "Sequía", "Lluvia", "Humedad del suelo", "Escrito con plantillas"]
+
+
+def test_abre_en_ingles():
+    at = correr("en")
+    assert not at.exception and not at.error
+    assert at.radio(key="idioma").value == "en"
+    assert [t.label for t in at.tabs] == ["Summary", "Rainfall", "Meteorological drought", "Soil moisture",
+                                          "Soil water stress", "Where?"]
+    assert at.selectbox(key="zona").options == ["Whole region", "Altos Norte", "Altos Sur"]
+    todo = textos(at.markdown)
+    assert "Case No. Los Altos · Rainfall and soil moisture · 2001–2024" in todo
+    assert "What is happening to the water in Los Altos?" in todo
+    assert "Verdict:" in todo and "What does it mean?" in todo and "Case file sources" in todo
+    assert [m.label for m in at.tabs[1].metric][0] == "Evidence 01 · Change per decade"
+    assert "mm/month" in at.tabs[1].metric[0].value
+
+
+def test_en_ingles_no_quedan_textos_en_espanol():
+    at = correr("en")
+    visibles = (textos(at.markdown) + textos(at.caption) + " ".join(m.label + " " + m.value for m in at.metric)
+                + " ".join(t.label for t in at.tabs) + " ".join(r.label for r in at.radio)
+                + " ".join(str(o) for r in at.radio for o in r.options))
+    # los nombres de los municipios se quedan como son
+    visibles = visibles.replace("Encarnación de Díaz", "").replace("Cañadas de Obregón", "")
+    assert [r for r in RASTROS_ES if r in visibles] == []
+
+
+def test_en_ingles_indices_resumen_y_mapa():
+    at = correr("en")
+    assert [m.label for m in at.tabs[2].metric][0] == "Evidence 01 · Months in drought"
+    assert at.tabs[2].metric[1].value.endswith("months in drought")
+    assert "From January 2020 to December 2024." in textos(at.tabs[2].caption)
+    assert "No crop" not in textos(at.tabs[4].markdown)
+    assert "It does not directly measure crop stress" in textos(at.tabs[4].markdown)
+    resumen = textos(at.tabs[0].markdown)
+    assert "Summary in plain words" in resumen and "Written with templates" in resumen
+    donde = at.tabs[5]
+    assert "Thick border: significant trend" in textos(donde.markdown)
+    assert "Significant trend?" in donde.dataframe[0].value.columns
+
+
+def test_el_boton_cambia_todo_y_regresa():
+    at = correr("en")
+    at.radio(key="idioma").set_value("es").run()
+    assert at.tabs[0].label == "Resumen" and "Caso Nº" in textos(at.markdown)
+    at.radio(key="idioma").set_value("en").run()
+    assert not at.exception
+    assert at.tabs[0].label == "Summary" and "Case No." in textos(at.markdown)

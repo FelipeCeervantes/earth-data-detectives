@@ -12,6 +12,8 @@ from urllib.parse import quote
 
 import plotly.graph_objects as go
 
+from src import textos as T
+
 # --- 1. Primitivos -------------------------------------------------------------------------
 PAPEL = "#F5F0E6"
 TARJETA = "#FFFDF8"
@@ -41,10 +43,11 @@ PILA_NUMEROS = f"'{FUENTE_NUMEROS}', ui-monospace, Consolas, monospace"
 # "verde" (baja) se muestra azul petróleo: el color marca la dirección, no si es bueno o malo.
 # Ícono + palabra siempre, para no depender solo del color.
 VEREDICTO = {
-    "rojo": {"icono": "▲", "palabra": "Sube", "tinta": "#A83F1B", "fondo": "#F6DED3"},
-    "verde": {"icono": "▼", "palabra": "Baja", "tinta": "#1F6F8B", "fondo": "#D8EBF1"},
-    "amarillo": {"icono": "?", "palabra": "No concluyente", "tinta": "#8A5A00", "fondo": "#F7EBC9"},
-    "gris": {"icono": "=", "palabra": "Sin tendencia", "tinta": "#5B6472", "fondo": "#E9E6DF"},
+    "rojo": {"icono": "▲", "palabra": "Sube", "palabra_en": "Rising", "tinta": "#A83F1B", "fondo": "#F6DED3"},
+    "verde": {"icono": "▼", "palabra": "Baja", "palabra_en": "Falling", "tinta": "#1F6F8B", "fondo": "#D8EBF1"},
+    "amarillo": {"icono": "?", "palabra": "No concluyente", "palabra_en": "Inconclusive", "tinta": "#8A5A00",
+                 "fondo": "#F7EBC9"},
+    "gris": {"icono": "=", "palabra": "Sin tendencia", "palabra_en": "No trend", "tinta": "#5B6472", "fondo": "#E9E6DF"},
 }
 
 
@@ -61,6 +64,11 @@ NIVEL = {
 BANDAS = [(-1.5, -1.0, "moderado", "moderada"), (-2.0, -1.5, "severo", "severa"), (-4.0, -2.0, "extremo", "extrema")]
 MENOS_AGUA = "#A83F1B"   # óxido
 MAS_AGUA = "#1F6F8B"     # azul petróleo
+
+
+def palabra(color: str, idioma: str) -> str:
+    """Palabra del veredicto ("Sube" / "Rising") para un color de src.analisis.veredicto."""
+    return VEREDICTO[color]["palabra_en" if idioma == "en" else "palabra"]
 
 
 def rgba(hex_color: str, alfa: float) -> str:
@@ -242,20 +250,23 @@ PLANTILLA = go.layout.Template(layout=dict(
 ))
 SERIE_MENSUAL = dict(color=rgba(TINTA_SUAVE, 0.55), width=1)
 
-# Configuración de las gráficas: sin logo de Plotly y fechas en español ("mar 1998" en vez de "Mar 1998").
-_MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre",
-          "noviembre", "diciembre"]
-CONFIG_GRAFICA = {
-    "displaylogo": False,
-    "locale": "es-dd",
-    "locales": {"es-dd": {"format": {
-        "months": _MESES, "shortMonths": [m[:3] for m in _MESES],
-        "days": ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"],
-        "shortDays": ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"],
-        "decimal": ".", "thousands": ",",
-    }}},
-}
-FORMATO_MES = "%b %Y"  # encabezado del recuadro al pasar el mouse: "mar 1998"
+# Configuración de las gráficas: sin logo de Plotly y fechas en el idioma de la app ("mar 1998" / "Mar 1998").
+def config_grafica(idioma: str) -> dict:
+    if idioma == "en":
+        return {"displaylogo": False}  # Plotly ya viene en inglés
+    meses, dias = T.MESES["es"], T.DIAS["es"]
+    return {
+        "displaylogo": False,
+        "locale": "es-dd",
+        "locales": {"es-dd": {"format": {
+            "months": meses, "shortMonths": [m[:3] for m in meses], "days": dias, "shortDays": [d[:3] for d in dias],
+            "decimal": ".", "thousands": ",",
+        }}},
+    }
+
+
+CONFIG_GRAFICA = config_grafica("es")
+FORMATO_MES = "%b %Y"  # encabezado del recuadro al pasar el mouse: "mar 1998" / "Mar 1998"
 
 
 def _mezcla(a: str, b: str, t: float) -> str:
@@ -281,48 +292,49 @@ def anotacion(x, y, texto: str, color: str, derecha: bool) -> dict:
 
 
 # --- Piezas HTML ---------------------------------------------------------------------------
-def marca_html() -> str:
-    return ('<div class="dd-marca"><span class="dd-marca__nombre">Detectives de Datos de la Tierra</span>'
-            '<span class="dd-marca__lema">Expedientes del clima · NASA POWER · 1981–2024</span></div>')
+def marca_html(idioma: str = "es") -> str:
+    return (f'<div class="dd-marca"><span class="dd-marca__nombre">{T.t("marca.nombre", idioma)}</span>'
+            f'<span class="dd-marca__lema">{T.t("marca.lema", idioma)}</span></div>')
 
 
-def caso_html(numero: str, pregunta: str, nota: str) -> str:
+def caso_html(numero: str, pregunta: str, nota: str, idioma: str = "es") -> str:
     """Encabezado de expediente: número de caso en mono y la pregunta grande."""
-    return (f'<div class="dd-caso"><p class="dd-caso__numero">Caso Nº {html.escape(numero)}</p>'
+    return (f'<div class="dd-caso"><p class="dd-caso__numero">{T.t("caso.prefijo", idioma)} {html.escape(numero)}</p>'
             f'<p class="dd-caso__pregunta" role="heading" aria-level="2">{html.escape(pregunta)}</p>'
             f'<p class="dd-caso__nota">{nota}</p></div>')
 
 
-def sello_html(color: str, texto: str) -> str:
+def sello_html(color: str, texto: str, idioma: str = "es") -> str:
     """Veredicto como sello: ícono + VEREDICTO: PALABRA, y la explicación al lado."""
     v = VEREDICTO[color]
     return (f'<div class="dd-veredicto"><div class="dd-sello" style="color:{v["tinta"]};background:{v["fondo"]}">'
-            f'<span class="dd-sello__icono" aria-hidden="true">{v["icono"]}</span>Veredicto: {v["palabra"]}</div>'
-            f'<p class="dd-veredicto__texto">{html.escape(texto)}</p></div>')
+            f'<span class="dd-sello__icono" aria-hidden="true">{v["icono"]}</span>{T.t("sello.veredicto", idioma)}: '
+            f'{palabra(color, idioma)}</div><p class="dd-veredicto__texto">{html.escape(texto)}</p></div>')
 
 
-def faltan_html(anios: int) -> str:
-    return (f'<p class="dd-faltan">Con esta tendencia, harían falta unos <strong>{anios} años</strong> '
-            'más de datos para estar seguros.</p>')
+def faltan_html(anios: int, idioma: str = "es") -> str:
+    return f'<p class="dd-faltan">{T.t("faltan", idioma, n=anios)}</p>'
 
 
-def fuentes_html(creditos_html: str) -> str:
-    return f'<div class="dd-fuentes"><p class="dd-fuentes__titulo">Fuentes del expediente</p>{creditos_html}</div>'
+def fuentes_html(creditos_html: str, idioma: str = "es") -> str:
+    return (f'<div class="dd-fuentes"><p class="dd-fuentes__titulo">{T.t("etq.fuentes", idioma)}</p>'
+            f'{creditos_html}</div>')
 
 
-def panel_html() -> str:
-    return '<p class="dd-panel">Panel del detective</p>'
+def panel_html(idioma: str = "es") -> str:
+    return f'<p class="dd-panel">{T.t("panel.titulo", idioma)}</p>'
 
 
-def significa_html(texto: str, no_es: str | None = None) -> str:
+def significa_html(texto: str, no_es: str | None = None, idioma: str = "es") -> str:
     """Recuadro "¿Qué significa?" con su "Qué no es" opcional."""
-    extra = (f'<p class="dd-significa__no"><strong>Qué no es:</strong> {html.escape(no_es)}</p>' if no_es else "")
-    return (f'<div class="dd-significa"><p class="dd-etiqueta">¿Qué significa?</p>'
+    extra = (f'<p class="dd-significa__no"><strong>{T.t("etq.que_no_es", idioma)}</strong> {html.escape(no_es)}</p>'
+             if no_es else "")
+    return (f'<div class="dd-significa"><p class="dd-etiqueta">{T.t("etq.que_significa", idioma)}</p>'
             f'<p class="dd-significa__texto">{html.escape(texto)}</p>{extra}</div>')
 
 
-def limites_html(fuente: str, limite: str) -> str:
-    return (f'<div class="dd-limites"><p class="dd-etiqueta">Fuente y limitaciones</p>'
+def limites_html(fuente: str, limite: str, idioma: str = "es") -> str:
+    return (f'<div class="dd-limites"><p class="dd-etiqueta">{T.t("etq.fuente_limites", idioma)}</p>'
             f'<p>{html.escape(fuente)}</p><p>{html.escape(limite)}</p></div>')
 
 
@@ -337,27 +349,29 @@ def tarjetas_html(tarjetas: list[dict]) -> str:
     return f'<div class="dd-tarjetas">{"".join(partes)}</div>'
 
 
-def resumen_html(res: dict, origen: str) -> str:
+def resumen_html(res: dict, origen: str, idioma: str = "es") -> str:
     """Resumen en palabras (formato de src.explicar). Todo el texto se escapa: puede venir de Gemini."""
     e = html.escape
-    temas = {"lluvia": "Lluvia", "sequia": "Sequía", "humedad": "Humedad", "estres": "Estrés", "donde": "Dónde"}
-    puntos = "".join(f'<li><span class="dd-resumen__tema">{temas.get(p.get("tema"), "")}</span>{e(p.get("texto", ""))}</li>'
-                     for p in res.get("puntos", []))
+    puntos = "".join(
+        f'<li><span class="dd-resumen__tema">{T.t("tema." + p["tema"], idioma) if T.tiene("tema." + str(p.get("tema")), idioma) else ""}'
+        f'</span>{e(p.get("texto", ""))}</li>' for p in res.get("puntos", []))
     cuidado = "".join(f"<li>{e(c)}</li>" for c in res.get("cuidado", []))
-    pensar = (f'<p><strong>Para pensar:</strong> {e(res["para_pensar"])}</p>' if res.get("para_pensar") else "")
-    return (f'<div class="dd-resumen"><p class="dd-etiqueta">Resumen en palabras sencillas</p>'
+    pensar = (f'<p><strong>{T.t("etq.para_pensar", idioma)}</strong> {e(res["para_pensar"])}</p>'
+              if res.get("para_pensar") else "")
+    return (f'<div class="dd-resumen"><p class="dd-etiqueta">{T.t("etq.resumen", idioma)}</p>'
             f'<p class="dd-resumen__titular" role="heading" aria-level="3">{e(res.get("titular", ""))}</p>'
             f'<p>{e(res.get("resumen", ""))}</p><ul>{puntos}</ul>'
-            + (f'<p class="dd-etiqueta">Con cuidado</p><ul>{cuidado}</ul>' if cuidado else "")
+            + (f'<p class="dd-etiqueta">{T.t("etq.cuidado", idioma)}</p><ul>{cuidado}</ul>' if cuidado else "")
             + f'{pensar}<p class="dd-resumen__origen">{e(origen)}</p></div>')
 
 
-def leyenda_mapa_html(maximo: float, unidades: str, seguras: int, total: int) -> str:
+def leyenda_mapa_html(maximo: float, unidades: str, seguras: int, total: int, idioma: str = "es") -> str:
     """Escala de color y qué borde marca una tendencia segura (las dos pruebas coinciden)."""
-    return (f'<div class="dd-leyenda"><span><span aria-hidden="true">▼</span> menos agua '
-            f'(−{maximo:.2f} {html.escape(unidades)} por década)</span><span class="dd-leyenda__barra" aria-hidden="true">'
-            f'</span><span><span aria-hidden="true">▲</span> más agua (+{maximo:.2f})</span></div>'
+    return (f'<div class="dd-leyenda"><span><span aria-hidden="true">▼</span> {T.t("leyenda.menos", idioma)} '
+            f'(−{maximo:.2f} {html.escape(unidades)} {T.t("leyenda.por_decada", idioma)})</span>'
+            f'<span class="dd-leyenda__barra" aria-hidden="true"></span><span><span aria-hidden="true">▲</span> '
+            f'{T.t("leyenda.mas", idioma)} (+{maximo:.2f})</span></div>'
             f'<div class="dd-leyenda"><span class="dd-leyenda__muestra dd-leyenda__muestra--segura" aria-hidden="true">'
-            f'</span><span>Borde grueso: tendencia segura</span><span class="dd-leyenda__muestra '
-            f'dd-leyenda__muestra--no" aria-hidden="true"></span><span>Borde punteado: todavía no segura</span>'
-            f'<strong>{seguras} de {total} celdas con tendencia segura.</strong></div>')
+            f'</span><span>{T.t("leyenda.segura", idioma)}</span><span class="dd-leyenda__muestra '
+            f'dd-leyenda__muestra--no" aria-hidden="true"></span><span>{T.t("leyenda.no_segura", idioma)}</span>'
+            f'<strong>{T.t("leyenda.cuenta", idioma, n=seguras, total=total)}</strong></div>')

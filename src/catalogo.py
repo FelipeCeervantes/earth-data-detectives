@@ -65,15 +65,60 @@ VARIABLES: dict[str, dict] = {
     for v in _VARIABLES_BASE
 }
 
+# En inglés (lo que ven los jueces). VARIABLES guarda el español; listar/obtener eligen el idioma.
+_SATURACION_EN = (" It is measured as a percentage of saturation: 0% is completely dry soil and 100% is soil with "
+                  "all its pores full of water.")
+TRADUCCION_EN: dict[str, dict] = {
+    "precipitacion": {
+        "nombre": "Rainfall",
+        "definicion": "How much water fell from the sky in the month (rain, hail or snow). 1 mm equals 1 litre of "
+                      "water on each square metre of ground.",
+        "unidades": "mm/month",
+        "fuente": "MERRA-2 via NASA POWER (corrected precipitation)",
+    },
+    "humedad_superficie": {
+        "nombre": "Surface soil moisture",
+        "definicion": "How wet the top 5 centimetres of soil are. It changes fast: it rises with every rain and "
+                      "drops after a few sunny days." + _SATURACION_EN,
+        "unidades": "% saturation",
+        "fuente": "MERRA-2 via NASA POWER",
+    },
+    "humedad_raices": {
+        "nombre": "Root-zone soil moisture",
+        "definicion": "How wet the soil is where plant roots are (down to 1 metre). It is the water that crops and "
+                      "pastures can use." + _SATURACION_EN,
+        "unidades": "% saturation",
+        "fuente": "MERRA-2 via NASA POWER",
+    },
+    "humedad_perfil": {
+        "nombre": "Full-profile soil moisture",
+        "definicion": "How wet the soil is from the surface down to the bedrock. It changes slowly: it keeps the "
+                      "memory of several months of rain or drought." + _SATURACION_EN,
+        "unidades": "% saturation",
+        "fuente": "MERRA-2 via NASA POWER",
+    },
+}
 
-def listar_variables() -> list[dict]:
-    """Regresa la lista de variables (copias, para que nadie modifique el catálogo)."""
-    return [deepcopy(v) for v in VARIABLES.values()]
+
+def _en_idioma(variable: dict, idioma: str) -> dict:
+    if idioma == "es":
+        return deepcopy(variable)
+    if idioma == "en":
+        return {**deepcopy(variable), **TRADUCCION_EN[variable["id"]]}
+    raise ValueError(f"Idioma no válido: '{idioma}'. Usa 'en' o 'es'.")
 
 
-def obtener_variable(id_variable: str) -> dict:
-    """Regresa la variable con ese id. Lanza ValueError si no existe."""
+def listar_variables(idioma: str = "es") -> list[dict]:
+    """Regresa la lista de variables (copias, para que nadie modifique el catálogo) en el idioma pedido."""
+    return [_en_idioma(v, idioma) for v in VARIABLES.values()]
+
+
+def obtener_variable(id_variable: str, idioma: str = "es") -> dict:
+    """Regresa la variable con ese id, con nombre, definición, unidades y fuente en el idioma pedido (en/es).
+
+    Lanza ValueError si no existe.
+    """
     if id_variable not in VARIABLES:
         validas = ", ".join(VARIABLES)
         raise ValueError(f"La variable '{id_variable}' no existe. Usa una de: {validas}.")
-    return deepcopy(VARIABLES[id_variable])
+    return _en_idioma(VARIABLES[id_variable], idioma)
