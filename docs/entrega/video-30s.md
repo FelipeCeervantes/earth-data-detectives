@@ -12,7 +12,7 @@
 | 8–17 s | "With free NASA POWER data, the app compares rain and soil moisture with the normal, measures drought and soil stress, and tests every trend." | Screen recording: choose zone and period in the detective panel → **Rainfall** tab (verdict stamp) → **Meteorological drought** bars → **Soil moisture**. Caption: "Data: NASA POWER (MERRA-2) · 1981–2024". |
 | 17–21 s | "Gemini explains it all in plain words, without inventing numbers." | **Summary** tab, highlight "Written by Gemini… (checked: no new numbers)". |
 | 21–26 s | "The worst drought hit in 2011, and soil moisture shows signs of decline in the south." | Drought chart zoomed on Jan 2011 – Jan 2012 ("Extreme drought"), then the map with **Altos Sur** selected. |
-| 26–30 s | "Next: more regions and early drought warnings. NASA science, for everyone." | Closing card: "Next: more regions · early drought warnings", slogan and the link to the live app. |
+| 26–30 s | "Next: more regions and early drought warnings. NASA science, for everyone." | Closing card: "Next: more regions · early drought warnings", slogan and the link to the live app (https://earth-data-detectives.streamlit.app). |
 
 **If it runs long**, cut ", and tests every trend" first, then "Mexico,". Read at an energetic pace: about 2.8 words per second.
 

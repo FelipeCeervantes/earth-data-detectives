@@ -15,7 +15,7 @@ Los Altos de Jalisco, a highland region of 20 municipalities in western Mexico, 
 
 ## Project demo
 - Demo: [TO FILL: link to the 7 slides (PDF) or the 30-second video]
-- Live app: [TO FILL: link to the app on Streamlit Community Cloud]
+- Live app: https://earth-data-detectives.streamlit.app
 - Source code: https://github.com/FelipeCeervantes/earth-data-detectives
 
 ## Project details
