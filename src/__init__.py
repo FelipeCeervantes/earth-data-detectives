@@ -1,1 +1,1 @@
-"""Detectives de Datos de la Tierra: módulos de la app."""
+"""TerraLens: módulos de la app."""

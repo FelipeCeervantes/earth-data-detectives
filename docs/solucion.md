@@ -1,4 +1,4 @@
-# Earth Data Detectives: the solution on one page
+# TerraLens: the solution on one page
 
 
 ## 1. The problem

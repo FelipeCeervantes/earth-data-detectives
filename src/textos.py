@@ -25,8 +25,8 @@ DIAS = {
 TEXTOS: dict[str, dict[str, str]] = {
     "en": {
         # Página, marca y panel
-        "pagina.titulo": "Earth Data Detectives · Los Altos",
-        "marca.nombre": "Earth Data Detectives",
+        "pagina.titulo": "TerraLens · Los Altos",
+        "marca.nombre": "TerraLens",
         "marca.lema": "NASA data in plain words · 1981–2024",
         "panel.titulo": "Detective's panel",
         "panel.donde": "Zone",
@@ -185,8 +185,8 @@ TEXTOS: dict[str, dict[str, str]] = {
             'Framework</a> (2025 Intercensal Survey). Drought: SPI (McKee et al., 1993). Ground and official checks: '
             '<a href="https://smn.conagua.gob.mx/es/climatologia/informacion-climatologica/informacion-estadistica-'
             'climatologica">CONAGUA rain gauges (SMN)</a> and <a href="https://smn.conagua.gob.mx/es/climatologia/'
-            'monitor-de-sequia/monitor-de-sequia-en-mexico">Mexico\'s Drought Monitor</a>. 3D relief: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> (AWS Open Data, with NASA SRTM data). Made by the Earth Data '
-            "Detectives team for the NASA Space Apps Challenge."
+            'monitor-de-sequia/monitor-de-sequia-en-mexico">Mexico\'s Drought Monitor</a>. 3D relief: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> (AWS Open Data, with NASA SRTM data). TerraLens is made by team '
+            "Capa 8 (Tecnológico de Tlajomulco, Jalisco) for the NASA Space Apps Challenge."
         ),
         "fuente_power": "NASA POWER, from the MERRA-2 model (NASA GMAO), monthly data since 1981. "
                         "Normal = 1991–2020 (WMO climate normal).",
@@ -321,8 +321,8 @@ TEXTOS: dict[str, dict[str, str]] = {
                           "it is only a reference. These are statistical outlooks from past data, not forecasts.",
     },
     "es": {
-        "pagina.titulo": "Detectives de Datos de la Tierra · Los Altos",
-        "marca.nombre": "Detectives de Datos de la Tierra",
+        "pagina.titulo": "TerraLens · Los Altos",
+        "marca.nombre": "TerraLens",
         "marca.lema": "Datos de la NASA en palabras sencillas · 1981–2024",
         "panel.titulo": "Panel del detective",
         "panel.donde": "Zona",
@@ -468,9 +468,9 @@ TEXTOS: dict[str, dict[str, str]] = {
             "(Encuesta Intercensal 2025). Sequía: SPI (McKee y colegas, 1993). Comprobaciones en tierra y oficial: "
             '<a href="https://smn.conagua.gob.mx/es/climatologia/informacion-climatologica/informacion-estadistica-'
             'climatologica">pluviómetros de CONAGUA (SMN)</a> y <a href="https://smn.conagua.gob.mx/es/climatologia/'
-            'monitor-de-sequia/monitor-de-sequia-en-mexico">Monitor de Sequía de México</a>. Relieve 3D: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> (AWS Open Data, con datos SRTM de la NASA). Hecho por el equipo '
-            "Detectives de Datos "
-            "de la Tierra para el NASA Space Apps Challenge."
+            'monitor-de-sequia/monitor-de-sequia-en-mexico">Monitor de Sequía de México</a>. Relieve 3D: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> (AWS Open Data, con datos SRTM de la NASA). TerraLens lo hizo el equipo '
+            "Capa 8 (Tecnológico de Tlajomulco, Jalisco) "
+            "para el NASA Space Apps Challenge."
         ),
         "fuente_power": "NASA POWER, a partir del modelo MERRA-2 (NASA GMAO), datos mensuales desde 1981. "
                         "Lo normal = 1991–2020 (norma de la OMM).",

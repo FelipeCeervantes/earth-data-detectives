@@ -1,4 +1,4 @@
-# Earth Data Detectives · Los Altos de Jalisco 🌎
+# TerraLens · Los Altos de Jalisco 🌎
 
 A Python + Streamlit app for the NASA Space Apps Challenge 2026. It explains in plain language how **rainfall** and **soil moisture** have changed in the 20 municipalities of **Los Altos de Jalisco**, Mexico: whether there has been **meteorological drought** or **soil water stress**, how much things change, where, and whether the change is statistically significant. It uses NASA POWER data (MERRA-2) and ends with a plain-language summary by Gemini.
 

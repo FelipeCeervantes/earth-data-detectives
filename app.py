@@ -1,4 +1,4 @@
-"""Earth Data Detectives · Los Altos de Jalisco: app de Streamlit (en inglés, con botón ES para el equipo).
+"""TerraLens · Los Altos de Jalisco: app de Streamlit (en inglés, con botón ES para el equipo).
 
 Ejecutar:  streamlit run app.py
 Tres secciones (Panorama, Lluvia y sequía, Agua del suelo); en cada una va primero la gráfica o el mapa y abajo
