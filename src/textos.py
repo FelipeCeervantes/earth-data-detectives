@@ -27,19 +27,18 @@ TEXTOS: dict[str, dict[str, str]] = {
         # Página, marca y panel
         "pagina.titulo": "Earth Data Detectives · Los Altos",
         "marca.nombre": "Earth Data Detectives",
-        "marca.lema": "Climate case files · NASA POWER · 1981–2024",
+        "marca.lema": "NASA data in plain words · 1981–2024",
         "panel.titulo": "Detective's panel",
-        "panel.donde": "1 · Where?",
+        "panel.donde": "Zone",
         "panel.municipios": "{n} municipalities: {lista}.",
-        "panel.periodo": "2 · Which period?",
+        "panel.periodo": "Period",
         "panel.normal": "Normal: 1991–2020 · Rainy season: June to October.",
         "panel.idioma": "Language",
         # Encabezado del caso
         "caso.prefijo": "Case No.",
         "caso.numero": "{lugar} · Rainfall and soil moisture · {a0}–{a1}",
         "caso.pregunta": "What is happening to the water in {lugar}?",
-        "caso.nota": "Choose the zone and the period in the detective's panel (on a phone, open it with » at the "
-                     "top left).",
+        "caso.nota": "Choose a zone and a period. Each section shows the chart first and, below it, what it means.",
         "lugar.los-altos": "Los Altos",
         # Avisos y errores
         "error.periodo_corto": "Choose a period of at least {n} years: with fewer, a trend cannot be told apart "
@@ -57,8 +56,12 @@ TEXTOS: dict[str, dict[str, str]] = {
         "spinner.resultados": "Calculating the results…",
         "spinner.celdas": "Calculating the trend of each cell…",
         # Pestañas
-        "tab.resumen": "Summary", "tab.lluvia": "Rainfall", "tab.sequia": "Meteorological drought",
-        "tab.humedad": "Soil moisture", "tab.estres": "Soil water stress", "tab.donde": "Where?",
+        "tab.resumen": "Overview", "tab.lluvia": "Rain and drought", "tab.suelo": "Soil water",
+        "nav.etiqueta": "Section",
+        "sec.donde": "Where is the water changing?", "sec.resumen": "What we found",
+        "sec.lluvia": "Is it raining more or less?", "sec.sequia": "When was there drought?",
+        "sec.comprobar": "Do other sources agree?", "sec.humedad": "Is the soil getting drier?",
+        "sec.estres": "When was the soil short of water?",
         # Etiquetas de las piezas
         "etq.que_significa": "What does it mean?",
         "etq.que_no_es": "What it is not:",
@@ -97,7 +100,7 @@ TEXTOS: dict[str, dict[str, str]] = {
         "graf.valor_mensual": "Monthly value", "graf.anomalia_mensual": "Monthly anomaly",
         "graf.margen": "Trend range (95% CI)", "graf.tendencia": "Trend", "graf.anio": "Year",
         "graf.eje_valor": "Value ({u})", "graf.eje_anomalia": "Anomaly ({u})",
-        "graf.anot_total": "{cambio} {u} over {n} years",
+        "graf.recta": "Trend line: {v0} {u} in {a0} and {v1} {u} in {a1} ({cambio} {u} over {n} years).",
         "graf.nota_anomalia": "Anomaly = difference from the average for that month in {a0}–{a1}.",
         "descargar": "Download {nombre} (CSV)",
         "csv.fecha": "date", "csv.anomalia": "anomaly",
@@ -134,7 +137,8 @@ TEXTOS: dict[str, dict[str, str]] = {
         "donde.segura": "<b>Significant trend</b>: both tests agree",
         "donde.no_segura": "Trend not yet significant",
         "leyenda.menos": "less water", "leyenda.mas": "more water", "leyenda.por_decada": "per decade",
-        "leyenda.segura": "Thick border: significant trend", "leyenda.no_segura": "Dashed border: not yet significant",
+        "leyenda.segura": "Bright, white edge: significant trend", "leyenda.no_segura": "Faint: not yet significant",
+        "mapa.ayuda": "Each block is a NASA POWER cell of about 55 × 65 km: its height shows how big the change is and its colour the direction. White dots are the CONAGUA rain gauges. Drag to turn the map; touch a block to see its numbers.",
         "leyenda.cuenta": "{n} of {total} cells with a significant trend.",
         "tabla.ver": "Show the table of cells",
         "tabla.celda": "Cell", "tabla.zona": "% of the zone", "tabla.cambio": "Change per decade ({u})",
@@ -161,7 +165,7 @@ TEXTOS: dict[str, dict[str, str]] = {
             'Framework</a> (2025 Intercensal Survey). Drought: SPI (McKee et al., 1993). Ground and official checks: '
             '<a href="https://smn.conagua.gob.mx/es/climatologia/informacion-climatologica/informacion-estadistica-'
             'climatologica">CONAGUA rain gauges (SMN)</a> and <a href="https://smn.conagua.gob.mx/es/climatologia/'
-            'monitor-de-sequia/monitor-de-sequia-en-mexico">Mexico\'s Drought Monitor</a>. Made by the Earth Data '
+            'monitor-de-sequia/monitor-de-sequia-en-mexico">Mexico\'s Drought Monitor</a>. 3D relief: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> (AWS Open Data, with NASA SRTM data). Made by the Earth Data '
             "Detectives team for the NASA Space Apps Challenge."
         ),
         "fuente_power": "NASA POWER, from the MERRA-2 model (NASA GMAO), monthly data since 1981. "
@@ -170,7 +174,7 @@ TEXTOS: dict[str, dict[str, str]] = {
         "significa.resumen": (
             "Here is what matters most, in a few words. We compare each month with what was normal from 1991 to 2020 "
             "and measure whether rainfall and soil moisture are rising, falling or staying the same. Each card has "
-            "its own tab, with the charts and the details."),
+            "its own section, with the charts and the details."),
         "significa.lluvia": (
             "Rainfall is measured in millimetres: 1 mm is 1 litre of water on each square metre. In Los Altos almost "
             "all of it falls between June and October, the rainy season that fills dams and ponds and waters the "
@@ -191,11 +195,11 @@ TEXTOS: dict[str, dict[str, str]] = {
             "Each month is compared with the same month in other years, so a dry April is not confused with a dry "
             "August."),
         "significa.donde": (
-            "The map shows how the water is changing in each piece of the region. Each square is a NASA POWER cell of "
-            "about 55 × 65 km: the colour says whether the trend there is towards more water (blue) or less (rust), "
-            "and how strong it is. The lines are the borders of the 20 municipalities (INEGI)."),
+            "The map shows how the water is changing in each piece of the region. The taller the block, the bigger the "
+            "change; blue means the trend is towards more water and orange towards less. The yellow line is the "
+            "border of the zone and the thin lines are the 20 municipalities (INEGI)."),
         "no_es.sequia": "Little rain does not mean the soil is already dry or that crops are suffering: for that, "
-                        "check the soil moisture and soil water stress tabs.",
+                        "check the Soil water section.",
         "no_es.estres": "It does not directly measure crop stress: soil with little water does not prove that the "
                         "maize or the agave is suffering. That needs field or vegetation data.",
         "limites.resumen": "These data show changes, not their causes. Each data point covers about 50 km: it "
@@ -242,23 +246,21 @@ TEXTOS: dict[str, dict[str, str]] = {
         "msm.limite": "The Monitor is an expert judgement that mixes several indices; ours only looks at rainfall, so "
                       "they should match often, not always.",
         "donde.estacion": "Rain gauge {nombre} ({municipio}) · CONAGUA SMN",
-        "donde.puntos": "Dots: the CONAGUA rain gauges we use to check POWER.",
     },
     "es": {
         "pagina.titulo": "Detectives de Datos de la Tierra · Los Altos",
         "marca.nombre": "Detectives de Datos de la Tierra",
-        "marca.lema": "Expedientes del clima · NASA POWER · 1981–2024",
+        "marca.lema": "Datos de la NASA en palabras sencillas · 1981–2024",
         "panel.titulo": "Panel del detective",
-        "panel.donde": "1 · ¿Dónde?",
+        "panel.donde": "Zona",
         "panel.municipios": "{n} municipios: {lista}.",
-        "panel.periodo": "2 · ¿En qué periodo?",
+        "panel.periodo": "Periodo",
         "panel.normal": "Lo normal: 1991–2020 · Temporada de lluvias: junio a octubre.",
         "panel.idioma": "Idioma",
         "caso.prefijo": "Caso Nº",
         "caso.numero": "{lugar} · Lluvia y humedad del suelo · {a0}–{a1}",
         "caso.pregunta": "¿Qué está pasando con el agua en {lugar}?",
-        "caso.nota": "Elige la zona y el periodo en el panel del detective (en el celular, ábrelo con » arriba a la "
-                     "izquierda).",
+        "caso.nota": "Elige una zona y un periodo. Cada sección muestra primero la gráfica y, abajo, qué significa.",
         "lugar.los-altos": "Los Altos",
         "error.periodo_corto": "Elige un periodo de al menos {n} años: con menos, una tendencia no se puede "
                                "distinguir de la variación normal.",
@@ -274,8 +276,12 @@ TEXTOS: dict[str, dict[str, str]] = {
         "spinner.descarga": "Cargando lluvia y humedad del suelo de NASA POWER…",
         "spinner.resultados": "Calculando los resultados…",
         "spinner.celdas": "Calculando la tendencia de cada celda…",
-        "tab.resumen": "Resumen", "tab.lluvia": "Lluvia", "tab.sequia": "Sequía meteorológica",
-        "tab.humedad": "Humedad del suelo", "tab.estres": "Estrés hídrico del suelo", "tab.donde": "¿Dónde?",
+        "tab.resumen": "Panorama", "tab.lluvia": "Lluvia y sequía", "tab.suelo": "Agua del suelo",
+        "nav.etiqueta": "Sección",
+        "sec.donde": "¿Dónde está cambiando el agua?", "sec.resumen": "Lo que encontramos",
+        "sec.lluvia": "¿Llueve más o menos?", "sec.sequia": "¿Cuándo hubo sequía?",
+        "sec.comprobar": "¿Coinciden otras fuentes?", "sec.humedad": "¿Se está secando el suelo?",
+        "sec.estres": "¿Cuándo le faltó agua al suelo?",
         "etq.que_significa": "¿Qué significa?",
         "etq.que_no_es": "Qué no es:",
         "etq.fuente_limites": "Fuente y limitaciones",
@@ -309,7 +315,7 @@ TEXTOS: dict[str, dict[str, str]] = {
         "graf.valor_mensual": "Valor mensual", "graf.anomalia_mensual": "Anomalía mensual",
         "graf.margen": "Margen de la tendencia (IC 95 %)", "graf.tendencia": "Tendencia", "graf.anio": "Año",
         "graf.eje_valor": "Valor ({u})", "graf.eje_anomalia": "Anomalía ({u})",
-        "graf.anot_total": "{cambio} {u} en {n} años",
+        "graf.recta": "Línea de tendencia: {v0} {u} en {a0} y {v1} {u} en {a1} ({cambio} {u} en {n} años).",
         "graf.nota_anomalia": "Anomalía = diferencia con el promedio de ese mes en {a0}–{a1}.",
         "descargar": "Descargar {nombre} (CSV)",
         "csv.fecha": "fecha", "csv.anomalia": "anomalia",
@@ -342,7 +348,8 @@ TEXTOS: dict[str, dict[str, str]] = {
         "donde.segura": "<b>Tendencia segura</b>: las dos pruebas coinciden",
         "donde.no_segura": "Tendencia todavía no segura",
         "leyenda.menos": "menos agua", "leyenda.mas": "más agua", "leyenda.por_decada": "por década",
-        "leyenda.segura": "Borde grueso: tendencia segura", "leyenda.no_segura": "Borde punteado: todavía no segura",
+        "leyenda.segura": "Brillante y con borde blanco: tendencia segura", "leyenda.no_segura": "Tenue: todavía no segura",
+        "mapa.ayuda": "Cada bloque es una celda de NASA POWER de unos 55 × 65 km: su altura dice qué tan grande es el cambio y su color, hacia dónde va. Los puntos blancos son los pluviómetros de CONAGUA. Arrastra para girar el mapa; toca un bloque para ver sus números.",
         "leyenda.cuenta": "{n} de {total} celdas con tendencia segura.",
         "tabla.ver": "Ver la tabla de las celdas",
         "tabla.celda": "Celda", "tabla.zona": "% de la zona", "tabla.cambio": "Cambio por década ({u})",
@@ -368,7 +375,7 @@ TEXTOS: dict[str, dict[str, str]] = {
             "(Encuesta Intercensal 2025). Sequía: SPI (McKee y colegas, 1993). Comprobaciones en tierra y oficial: "
             '<a href="https://smn.conagua.gob.mx/es/climatologia/informacion-climatologica/informacion-estadistica-'
             'climatologica">pluviómetros de CONAGUA (SMN)</a> y <a href="https://smn.conagua.gob.mx/es/climatologia/'
-            'monitor-de-sequia/monitor-de-sequia-en-mexico">Monitor de Sequía de México</a>. Hecho por el equipo '
+            'monitor-de-sequia/monitor-de-sequia-en-mexico">Monitor de Sequía de México</a>. Relieve 3D: <a href="https://registry.opendata.aws/terrain-tiles/">Terrain Tiles</a> (AWS Open Data, con datos SRTM de la NASA). Hecho por el equipo '
             "Detectives de Datos "
             "de la Tierra para el NASA Space Apps Challenge."
         ),
@@ -376,7 +383,7 @@ TEXTOS: dict[str, dict[str, str]] = {
                         "Lo normal = 1991–2020 (norma de la OMM).",
         "significa.resumen": (
             "Aquí está lo más importante en pocas palabras. Comparamos cada mes con lo normal de 1991 a 2020 y medimos "
-            "si la lluvia y la humedad del suelo suben, bajan o se mantienen. Cada tarjeta tiene su pestaña, con las "
+            "si la lluvia y la humedad del suelo suben, bajan o se mantienen. Cada tarjeta tiene su sección, con las "
             "gráficas y los detalles."),
         "significa.lluvia": (
             "La lluvia se mide en milímetros: 1 mm es 1 litro de agua sobre cada metro cuadrado. En Los Altos casi "
@@ -399,11 +406,11 @@ TEXTOS: dict[str, dict[str, str]] = {
             "déficit. Cada mes se compara con el mismo mes de otros años, así que un abril seco no se confunde con "
             "un agosto seco."),
         "significa.donde": (
-            "El mapa muestra cómo cambia el agua en cada pedazo de la región. Cada cuadro es una celda de NASA POWER "
-            "de unos 55 × 65 km: el color dice si ahí la tendencia va hacia más agua (azul) o hacia menos (óxido), y "
-            "qué tan fuerte. Las líneas son los límites de los 20 municipios (INEGI)."),
+            "El mapa muestra cómo cambia el agua en cada pedazo de la región. Entre más alto el bloque, más grande el "
+            "cambio; azul quiere decir que la tendencia va hacia más agua y naranja, hacia menos. La línea amarilla "
+            "es el borde de la zona y las líneas delgadas, los 20 municipios (INEGI)."),
         "no_es.sequia": "Que llueva poco no significa que el suelo ya esté seco ni que los cultivos sufran: para eso "
-                        "revisa las pestañas de humedad y de estrés hídrico del suelo.",
+                        "revisa la sección Agua del suelo.",
         "no_es.estres": "No mide directamente el estrés de los cultivos: que el suelo tenga poca agua no prueba que "
                         "el maíz o el agave estén sufriendo. Para eso se necesitan datos de campo o de vegetación.",
         "limites.resumen": "Estos datos muestran cambios, no sus causas. Cada dato cubre unos 50 km: describe la zona "
@@ -452,7 +459,6 @@ TEXTOS: dict[str, dict[str, str]] = {
         "msm.limite": "El Monitor es un juicio de expertos que mezcla varios índices; el nuestro solo mira la lluvia, "
                       "así que deben coincidir seguido, no siempre.",
         "donde.estacion": "Pluviómetro {nombre} ({municipio}) · SMN de CONAGUA",
-        "donde.puntos": "Puntos: los pluviómetros de CONAGUA con los que comprobamos POWER.",
     },
 }
 

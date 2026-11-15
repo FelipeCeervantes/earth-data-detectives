@@ -1,28 +1,19 @@
-# Identidad "Cielo sobre tierra seca" (ver docs/marca.md). Sin logos ni colores de la NASA.
+# Identidad "Ventana al cielo" (ver docs/marca.md). Sin logos ni colores de la NASA.
 # Los mismos valores viven en src/estilo.py; si cambias uno, cambia el otro.
 [theme]
-base = "light"
-primaryColor = "#14212B"               # noche: controles, pestaña activa
-backgroundColor = "#EEF2F1"            # niebla (el cielo y la tierra los pinta src/estilo.py)
-secondaryBackgroundColor = "#F7F9F9"   # campos sobre el vidrio
-textColor = "#14212B"                  # noche
-linkColor = "#14212B"
-borderColor = "#C9D3D6"
+base = "dark"
+primaryColor = "#5CC8FF"               # agua: controles y foco
+backgroundColor = "#0B2B52"            # cielo hondo (el degradado y el relieve 3D los pone src/estilo.py)
+secondaryBackgroundColor = "#163E6B"   # campos
+textColor = "#F3F8FD"                  # nube
+linkColor = "#5CC8FF"
+borderColor = "#2E5C8C"
 showWidgetBorder = true
-baseRadius = "0.6rem"
-font = "Atkinson Hyperlegible Next:https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap"
-headingFont = "Bricolage Grotesque:https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&display=swap"
-codeFont = "Martian Mono:https://fonts.googleapis.com/css2?family=Martian+Mono:wdth,wght@87.5,400..700&display=swap"
-headingFontWeights = 760
-metricValueFontSize = "1.85rem"
-
-[theme.sidebar]
-backgroundColor = "#14212B"            # cielo nocturno (el degradado lo pone src/estilo.py)
-secondaryBackgroundColor = "#263C4C"
-textColor = "#EEF2F1"
-primaryColor = "#E2A24A"               # ámbar
-linkColor = "#E2A24A"
-borderColor = "#3A5263"
+baseRadius = "1rem"
+font = "Figtree:https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
+headingFont = "Outfit:https://fonts.googleapis.com/css2?family=Outfit:wght@200..800&display=swap"
+headingFontWeights = 600
+metricValueFontSize = "2.1rem"
 
 [client]
 toolbarMode = "viewer"   # sin el botón "Deploy" ni menús de desarrollador

@@ -1,4 +1,4 @@
-"""Pruebas de la app (fase Los Altos) con AppTest: 6 pestañas, "¿Qué significa?", sin internet y accesibilidad."""
+"""Pruebas de la app (fase Los Altos) con AppTest: 3 secciones, gráfica y luego "¿Qué significa?", sin internet."""
 
 from pathlib import Path
 
@@ -11,7 +11,7 @@ from streamlit.testing.v1 import AppTest
 from src import datos, explicar
 
 APP = str(Path(__file__).parent.parent / "app.py")
-PESTANAS = ["Resumen", "Lluvia", "Sequía meteorológica", "Humedad del suelo", "Estrés hídrico del suelo", "¿Dónde?"]
+SECCIONES = ["resumen", "lluvia", "suelo"]
 FECHAS = pd.date_range("1981-01-01", "2024-12-01", freq="MS")
 SERIE_ZONA_REAL = datos.serie_zona
 SERIE_PUNTO_REAL = datos.serie_punto
@@ -41,15 +41,17 @@ def falsos(monkeypatch):
                         raising=False)
 
 
-def correr(idioma: str = "es") -> AppTest:
-    """Corre la app (abre en inglés) y, si se pide, cambia a español con el botón ES.
+def correr(idioma: str = "es", vista: str = "resumen") -> AppTest:
+    """Corre la app (abre en inglés), cambia de idioma con el botón de abajo si se pide y abre una sección.
 
     Las pruebas que revisan textos en español usan "es"; las de la versión para los jueces, "en".
     """
     at = AppTest.from_file(APP, default_timeout=120)
     at.run()
     if idioma != "en":
-        at.radio(key="idioma").set_value(idioma).run()
+        at.segmented_control(key="idioma").set_value(idioma).run()
+    if vista != "resumen":
+        at.segmented_control(key="vista").set_value(vista).run()
     return at
 
 
@@ -57,29 +59,49 @@ def textos(elementos) -> str:
     return " ".join(e.value for e in elementos)
 
 
-def test_seis_pestanas_y_nada_fuera_de_los_altos():
+def opciones(at: AppTest, clave: str) -> list[str]:
+    """Lo que dicen los botones de un control (AppTest ya los entrega con su texto)."""
+    return list(at.segmented_control(key=clave).options)
+
+
+def test_tres_secciones_y_nada_fuera_de_los_altos():
     at = correr()
     assert not at.exception
-    assert [t.label for t in at.tabs] == PESTANAS
-    zona = at.selectbox(key="zona")
-    assert zona.options == ["Toda la región", "Altos Norte", "Altos Sur"]
+    assert [o.split(":")[-1].strip() for o in opciones(at, "vista")] == ["Panorama", "Lluvia y sequía", "Agua del suelo"]
+    assert at.segmented_control(key="vista").value == "resumen"
+    assert opciones(at, "zona") == ["Toda la región", "Altos Norte", "Altos Sur"]
+    assert at.segmented_control(key="zona").value == "los-altos"
     assert at.slider(key="periodo").value == (2001, 2024)
     todo = textos(at.markdown) + textos(at.caption)
     assert "Comparar ciudades" not in todo and "Recuadro" not in todo
     assert "Caso Nº Los Altos · Lluvia y humedad del suelo · 2001–2024" in todo
 
 
-def test_cada_pestana_explica_que_significa_y_sus_limites():
-    at = correr()
-    for pestana in at.tabs:
-        contenido = textos(pestana.markdown)
-        assert "¿Qué significa?" in contenido, pestana.label
-        assert "Fuente y limitaciones" in contenido, pestana.label
+@pytest.mark.parametrize("vista", SECCIONES)
+def test_cada_seccion_muestra_primero_la_grafica_y_abajo_que_significa(vista):
+    at = correr(vista=vista)
+    assert not at.exception
+    contenido = textos(at.markdown)
+    assert "¿Qué significa?" in contenido and "Fuente y limitaciones" in contenido
+    tipo = "deck_gl_json_chart" if vista == "resumen" else "plotly_chart"
+    assert at.get(tipo)
+    # recorre la página en orden: la primera gráfica o mapa llega antes del primer "¿Qué significa?"
+    orden = []
+    pendientes = list(at.main.children.values())
+    while pendientes:
+        e = pendientes.pop(0)
+        if e.type == tipo:
+            orden.append("grafica")
+        elif e.type == "markdown" and "¿Qué significa?" in e.value:
+            orden.append("significa")
+        pendientes[:0] = list(getattr(e, "children", {}).values())
+    assert orden[0] == "grafica"
 
 
-def test_resumen_con_tarjetas_y_texto_de_plantillas():
+def test_resumen_con_mapa_tarjetas_y_texto_de_plantillas():
     at = correr()
-    resumen = textos(at.tabs[0].markdown)
+    resumen = textos(at.markdown)
+    assert at.get("deck_gl_json_chart")
     assert "dd-tarjetas" in resumen and "Sequía meteorológica (SPI-6)" in resumen
     assert "Resumen en palabras sencillas" in resumen
     assert "Escrito con plantillas" in resumen  # sin clave de Gemini
@@ -91,71 +113,70 @@ def test_resumen_de_gemini_se_escapa(monkeypatch):
              "cuidado": ["Cada dato cubre unos 50 km."], "para_pensar": ""}
     monkeypatch.setattr(explicar, "resumen_con_gemini", lambda r, clave=None, modelo=None, **k: falso)
     at = correr()
-    resumen = textos(at.tabs[0].markdown)
+    resumen = textos(at.markdown)
     assert "Escrito por Gemini" in resumen
     assert "<script>" not in resumen and "&lt;script&gt;" in resumen
 
 
-def test_lluvia_veredicto_evidencias_y_descarga():
-    at = correr()
-    lluvia = at.tabs[1]
-    assert "dd-sello" in textos(lluvia.markdown)
-    etiquetas = [m.label for m in lluvia.metric]
-    assert etiquetas[0] == "Evidencia 01 · Cambio por década" and "mm/mes" in lluvia.metric[0].value
-    assert lluvia.get("download_button")
+def test_lluvia_veredicto_evidencias_descarga_y_comprobaciones():
+    at = correr(vista="lluvia")
+    contenido = textos(at.markdown)
+    assert "dd-sello" in contenido and "Qué no es" in contenido
+    etiquetas = [m.label for m in at.metric]
+    assert etiquetas[0] == "Evidencia 01 · Cambio por década" and "mm/mes" in at.metric[0].value
+    assert "Evidencia 01 · Meses en sequía" in etiquetas
+    assert at.get("download_button")
+    assert "Comprobación en tierra" in contenido and "Monitor de Sequía" in contenido
 
 
 def test_sequia_spi_3_y_6():
-    at = correr()
-    sequia = at.tabs[2]
-    assert [m.label for m in sequia.metric][0] == "Evidencia 01 · Meses en sequía"
-    assert "Qué no es" in textos(sequia.markdown)
-    at.radio(key="escala_spi").set_value(3).run()
+    at = correr(vista="lluvia")
+    at.segmented_control(key="escala_spi").set_value(3).run()
     assert not at.exception
-    assert " / " in at.tabs[2].metric[0].value
+    meses = [m for m in at.metric if m.label == "Evidencia 01 · Meses en sequía"]
+    assert meses and " / " in meses[0].value
 
 
-def test_humedad_con_las_tres_capas():
-    at = correr()
-    capa = at.radio(key="capa")
+def test_suelo_con_las_tres_capas():
+    at = correr(vista="suelo")
+    capa = at.segmented_control(key="capa")
     assert capa.value == "humedad_raices" and len(capa.options) == 3
     for opcion in ("humedad_superficie", "humedad_perfil"):
-        at.radio(key="capa").set_value(opcion).run()
+        at.segmented_control(key="capa").set_value(opcion).run()
         assert not at.exception
-        assert "% de saturación" in at.tabs[3].metric[0].value
+        assert "% de saturación" in at.metric[0].value
 
 
 def test_estres_aclara_que_no_mide_el_estres_de_los_cultivos():
-    at = correr()
-    estres = at.tabs[4]
-    assert "No mide directamente el estrés de los cultivos" in textos(estres.markdown)
-    assert [m.label for m in estres.metric][0] == "Evidencia 01 · Meses en déficit"
+    at = correr(vista="suelo")
+    assert "No mide directamente el estrés de los cultivos" in textos(at.markdown)
+    assert "Evidencia 01 · Meses en déficit" in [m.label for m in at.metric]
 
 
-def test_donde_mapa_con_leyenda_y_tabla():
+def test_mapa_con_leyenda_y_tabla():
     at = correr()
-    donde = at.tabs[5]
-    contenido = textos(donde.markdown)
+    contenido = textos(at.markdown)
     assert "menos agua" in contenido and "más agua" in contenido
-    assert "50 km" in contenido or "55 × 65 km" in contenido
-    assert donde.get("iframe") or donde.get("arrow_data_frame") or donde.dataframe
-    at.radio(key="var_mapa").set_value("precipitacion").run()
+    assert "55 × 65 km" in contenido + textos(at.caption)
+    assert at.dataframe
+    at.segmented_control(key="var_mapa").set_value("humedad_raices").run()
     assert not at.exception
 
 
 def test_cambiar_de_zona():
     at = correr()
-    at.selectbox(key="zona").set_value("altos-norte").run()
+    at.segmented_control(key="zona").set_value("altos-norte").run()
     assert not at.exception
     assert "Caso Nº Altos Norte" in textos(at.markdown)
-    assert "Villa Hidalgo" in textos(at.sidebar.caption)
+    assert "Villa Hidalgo" in textos(at.caption)
 
 
-def test_periodo_corto_avisa_sin_romper():
+def test_periodo_corto_avisa_sin_romper_ni_perder_el_idioma():
     at = correr()
     at.slider(key="periodo").set_value((2016, 2020)).run()
     assert not at.exception
     assert "al menos 10 años" in at.error[0].value
+    assert at.segmented_control(key="idioma").value == "es"
 
 
 def test_abre_con_los_datos_guardados_sin_descargar_nada(monkeypatch, tmp_path):
@@ -172,10 +193,12 @@ def test_abre_con_los_datos_guardados_sin_descargar_nada(monkeypatch, tmp_path):
     monkeypatch.setattr(datos, "_pedir_json", caido)
     at = correr()
     assert not at.exception and not at.error
+    assert "menos agua" in textos(at.markdown)
+    at.segmented_control(key="vista").set_value("lluvia").run()
+    assert not at.exception and not at.error
     assert llamadas == []  # ni una descarga
     assert not any("Sin conexión" in w.value for w in at.warning)
-    assert "dd-sello" in textos(at.tabs[1].markdown)
-    assert "menos agua" in textos(at.tabs[5].markdown)
+    assert "dd-sello" in textos(at.markdown)
 
 
 def test_sin_internet_ni_respaldo_avisa_sin_romper(monkeypatch):
@@ -195,75 +218,80 @@ def test_css_sin_etiquetas_html_dentro():
     assert estilo.CSS.count("<") == 2 and estilo.CSS.count(">") == 2
 
 
+def test_fondo_3d_trae_el_relieve():
+    from src import fondo
+    pagina = fondo.html()
+    assert "three@0.160.0" in pagina and '"alturas":[[' in pagina and "prefers-reduced-motion" in pagina
+
+
 def test_mapa_distingue_las_celdas_con_tendencia_segura():
     at = correr()
-    donde = at.tabs[5]
-    contenido = textos(donde.markdown)
-    assert "Borde grueso: tendencia segura" in contenido and "celdas con tendencia segura" in contenido
-    tabla = donde.dataframe[0].value
+    contenido = textos(at.markdown)
+    assert "tendencia segura" in contenido and "celdas con tendencia segura" in contenido
+    tabla = at.dataframe[0].value
     assert "¿Tendencia segura?" in tabla.columns
     assert set(tabla["¿Tendencia segura?"]) <= {"Sí", "Todavía no"}
 
 
-def test_ultimos_5_anios_se_lee_bien():
-    at = correr()
-    for pestana, palabra in ((at.tabs[2], "sequía"), (at.tabs[4], "déficit")):
-        evidencia = pestana.metric[1]
-        assert evidencia.label == "Evidencia 02 · Últimos 5 años"
-        assert evidencia.value.endswith(f"meses en {palabra}")
-        assert "Desde enero de 2020 hasta diciembre de 2024." in textos(pestana.caption)
-
+@pytest.mark.parametrize("vista, palabra", [("lluvia", "sequía"), ("suelo", "déficit")])
+def test_ultimos_5_anios_se_lee_bien(vista, palabra):
+    at = correr(vista=vista)
+    evidencia = next(m for m in at.metric if m.label == "Evidencia 02 · Últimos 5 años")
+    assert evidencia.value.endswith(f"meses en {palabra}")
+    assert "Desde enero de 2020 hasta diciembre de 2024." in textos(at.caption)
 
 
 # --- Inglés (lo que ven los jueces) ---------------------------------------------------------
 RASTROS_ES = ["¿Qué significa?", "Evidencia ", "Fuente y limitaciones", "Veredicto", "Fuentes del expediente",
               "Panel del detective", " por década", "Resumen en palabras", "Toda la región", "Caso Nº",
-              "Sequía", "Lluvia", "Humedad del suelo", "Escrito con plantillas"]
+              "Sequía", "Lluvia", "Humedad del suelo", "Escrito con plantillas", "Panorama", "Agua del suelo"]
 
 
 def test_abre_en_ingles():
     at = correr("en")
     assert not at.exception and not at.error
-    assert at.radio(key="idioma").value == "en"
-    assert [t.label for t in at.tabs] == ["Summary", "Rainfall", "Meteorological drought", "Soil moisture",
-                                          "Soil water stress", "Where?"]
-    assert at.selectbox(key="zona").options == ["Whole region", "Altos Norte", "Altos Sur"]
+    assert at.segmented_control(key="idioma").value == "en"
+    assert [o.split(":")[-1].strip() for o in opciones(at, "vista")] == ["Overview", "Rain and drought", "Soil water"]
+    assert opciones(at, "zona") == ["Whole region", "Altos Norte", "Altos Sur"]
     todo = textos(at.markdown)
     assert "Case No. Los Altos · Rainfall and soil moisture · 2001–2024" in todo
     assert "What is happening to the water in Los Altos?" in todo
-    assert "Verdict:" in todo and "What does it mean?" in todo and "Case file sources" in todo
-    assert [m.label for m in at.tabs[1].metric][0] == "Evidence 01 · Change per decade"
-    assert "mm/month" in at.tabs[1].metric[0].value
+    assert "What does it mean?" in todo and "Case file sources" in todo
+    at.segmented_control(key="vista").set_value("lluvia").run()
+    assert "Verdict:" in textos(at.markdown)
+    assert at.metric[0].label == "Evidence 01 · Change per decade" and "mm/month" in at.metric[0].value
 
 
-def test_en_ingles_no_quedan_textos_en_espanol():
-    at = correr("en")
-    visibles = (textos(at.markdown) + textos(at.caption) + " ".join(m.label + " " + m.value for m in at.metric)
-                + " ".join(t.label for t in at.tabs) + " ".join(r.label for r in at.radio)
-                + " ".join(str(o) for r in at.radio for o in r.options))
-    # los nombres de los municipios se quedan como son
-    visibles = visibles.replace("Encarnación de Díaz", "").replace("Cañadas de Obregón", "")
-    assert [r for r in RASTROS_ES if r in visibles] == []
+@pytest.mark.parametrize("vista", SECCIONES)
+def test_en_ingles_no_quedan_textos_en_espanol(vista):
+    at = correr("en", vista)
+    texto = (textos(at.markdown) + textos(at.caption) + " ".join(m.label + " " + m.value for m in at.metric)
+             + " ".join(opciones(at, "zona") + opciones(at, "vista")))
+    # los nombres de los municipios y de las fuentes de CONAGUA se quedan como son
+    for nombre in ("Encarnación de Díaz", "Cañadas de Obregón"):
+        texto = texto.replace(nombre, "")
+    assert [r for r in RASTROS_ES if r in texto] == []
 
 
 def test_en_ingles_indices_resumen_y_mapa():
+    at = correr("en", "lluvia")
+    meses = next(m for m in at.metric if m.label == "Evidence 01 · Months in drought")
+    assert " / " in meses.value
+    assert "From January 2020 to December 2024." in textos(at.caption)
+    at = correr("en", "suelo")
+    assert "No crop" not in textos(at.markdown)
+    assert "It does not directly measure crop stress" in textos(at.markdown)
     at = correr("en")
-    assert [m.label for m in at.tabs[2].metric][0] == "Evidence 01 · Months in drought"
-    assert at.tabs[2].metric[1].value.endswith("months in drought")
-    assert "From January 2020 to December 2024." in textos(at.tabs[2].caption)
-    assert "No crop" not in textos(at.tabs[4].markdown)
-    assert "It does not directly measure crop stress" in textos(at.tabs[4].markdown)
-    resumen = textos(at.tabs[0].markdown)
+    resumen = textos(at.markdown)
     assert "Summary in plain words" in resumen and "Written with templates" in resumen
-    donde = at.tabs[5]
-    assert "Thick border: significant trend" in textos(donde.markdown)
-    assert "Significant trend?" in donde.dataframe[0].value.columns
+    assert "significant trend" in resumen
+    assert "Significant trend?" in at.dataframe[0].value.columns
 
 
 def test_el_boton_cambia_todo_y_regresa():
     at = correr("en")
-    at.radio(key="idioma").set_value("es").run()
-    assert at.tabs[0].label == "Resumen" and "Caso Nº" in textos(at.markdown)
-    at.radio(key="idioma").set_value("en").run()
+    at.segmented_control(key="idioma").set_value("es").run()
+    assert "Caso Nº" in textos(at.markdown) and "¿Qué significa?" in textos(at.markdown)
+    at.segmented_control(key="idioma").set_value("en").run()
     assert not at.exception
-    assert at.tabs[0].label == "Summary" and "Case No." in textos(at.markdown)
+    assert "Case No." in textos(at.markdown)

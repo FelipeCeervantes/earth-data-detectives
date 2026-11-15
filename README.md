@@ -27,7 +27,8 @@ src/analisis.py     trends and statistical tests
 src/indices.py      meteorological drought (SPI), soil water stress and rainfall totals
 src/contraste.py    checks against CONAGUA: rain gauges (SMN) and Mexico's Drought Monitor
 src/explicar.py     plain-language summary (templates and Gemini)
-src/estilo.py       visual identity ("sky over dry land")
+src/estilo.py       visual identity ("window to the sky"): blue sky, frosted glass
+src/fondo.py        3D relief of Los Altos in the background (three.js)
 src/textos.py       interface texts
 data/region/        Los Altos boundaries (INEGI); data/ is otherwise a local cache
 demos/              stored series so the app works offline, plus the CONAGUA checks
