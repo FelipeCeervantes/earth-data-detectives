@@ -295,3 +295,15 @@ def test_el_boton_cambia_todo_y_regresa():
     at.segmented_control(key="idioma").set_value("en").run()
     assert not at.exception
     assert "Case No." in textos(at.markdown)
+
+
+def test_buscar_un_municipio_hace_zoom_y_lo_resalta_sin_bloques():
+    import json
+    at = correr()
+    mapa = json.loads(at.get("deck_gl_json_chart")[0].proto.json)
+    assert not any(c.get("extruded") for c in mapa["layers"])  # nada de bloques
+    at.selectbox(key="buscar").set_value("Tepatitlán de Morelos").run()
+    assert not at.exception
+    assert "Tepatitlán de Morelos: la celda de NASA POWER sobre su centro" in textos(at.markdown)
+    mapa = json.loads(at.get("deck_gl_json_chart")[0].proto.json)
+    assert mapa["initialViewState"]["zoom"] > 8

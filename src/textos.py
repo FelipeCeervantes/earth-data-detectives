@@ -138,7 +138,10 @@ TEXTOS: dict[str, dict[str, str]] = {
         "donde.no_segura": "Trend not yet significant",
         "leyenda.menos": "less water", "leyenda.mas": "more water", "leyenda.por_decada": "per decade",
         "leyenda.segura": "Bright, white edge: significant trend", "leyenda.no_segura": "Faint: not yet significant",
-        "mapa.ayuda": "Each block is a NASA POWER cell of about 55 × 65 km: its height shows how big the change is and its colour the direction. White dots are the CONAGUA rain gauges. Drag to turn the map; touch a block to see its numbers.",
+        "mapa.ayuda": "Each square is a NASA POWER cell of about 55 × 65 km: its colour shows the direction and size of the change, and a bright white edge marks a significant trend. Click a municipality to zoom in on it. Drag to move, scroll to zoom, right-drag (or Ctrl + drag) to tilt and turn. White dots are the CONAGUA rain gauges.",
+        "buscar.etiqueta": "Find a municipality", "buscar.placeholder": "Type a name, or click one on the map…",
+        "buscar.clic": "Click to zoom in",
+        "buscar.resultado": "{nombre}: the NASA POWER cell over its centre changes {pend} {u} per decade · {icono} {palabra}. Significant trend: {segura}.",
         "leyenda.cuenta": "{n} of {total} cells with a significant trend.",
         "tabla.ver": "Show the table of cells",
         "tabla.celda": "Cell", "tabla.zona": "% of the zone", "tabla.cambio": "Change per decade ({u})",
@@ -195,9 +198,9 @@ TEXTOS: dict[str, dict[str, str]] = {
             "Each month is compared with the same month in other years, so a dry April is not confused with a dry "
             "August."),
         "significa.donde": (
-            "The map shows how the water is changing in each piece of the region. The taller the block, the bigger the "
-            "change; blue means the trend is towards more water and orange towards less. The yellow line is the "
-            "border of the zone and the thin lines are the 20 municipalities (INEGI)."),
+            "The map shows how the water is changing in each piece of the region. The stronger the colour, the bigger "
+            "the change; blue means the trend is towards more water and orange towards less. The yellow line is "
+            "the border of the zone and the thin lines are the 20 municipalities (INEGI)."),
         "no_es.sequia": "Little rain does not mean the soil is already dry or that crops are suffering: for that, "
                         "check the Soil water section.",
         "no_es.estres": "It does not directly measure crop stress: soil with little water does not prove that the "
@@ -349,7 +352,10 @@ TEXTOS: dict[str, dict[str, str]] = {
         "donde.no_segura": "Tendencia todavía no segura",
         "leyenda.menos": "menos agua", "leyenda.mas": "más agua", "leyenda.por_decada": "por década",
         "leyenda.segura": "Brillante y con borde blanco: tendencia segura", "leyenda.no_segura": "Tenue: todavía no segura",
-        "mapa.ayuda": "Cada bloque es una celda de NASA POWER de unos 55 × 65 km: su altura dice qué tan grande es el cambio y su color, hacia dónde va. Los puntos blancos son los pluviómetros de CONAGUA. Arrastra para girar el mapa; toca un bloque para ver sus números.",
+        "mapa.ayuda": "Cada cuadro es una celda de NASA POWER de unos 55 × 65 km: su color dice hacia dónde va el cambio y qué tan grande es, y un borde blanco brillante marca una tendencia segura. Haz clic en un municipio para acercarte. Arrastra para moverlo, usa la rueda para acercar y arrastra con el botón derecho (o Ctrl) para inclinarlo y girarlo. Los puntos blancos son los pluviómetros de CONAGUA.",
+        "buscar.etiqueta": "Busca un municipio", "buscar.placeholder": "Escribe un nombre o haz clic en uno del mapa…",
+        "buscar.clic": "Haz clic para acercarte",
+        "buscar.resultado": "{nombre}: la celda de NASA POWER sobre su centro cambia {pend} {u} por década · {icono} {palabra}. Tendencia segura: {segura}.",
         "leyenda.cuenta": "{n} de {total} celdas con tendencia segura.",
         "tabla.ver": "Ver la tabla de las celdas",
         "tabla.celda": "Celda", "tabla.zona": "% de la zona", "tabla.cambio": "Cambio por década ({u})",
@@ -406,9 +412,9 @@ TEXTOS: dict[str, dict[str, str]] = {
             "déficit. Cada mes se compara con el mismo mes de otros años, así que un abril seco no se confunde con "
             "un agosto seco."),
         "significa.donde": (
-            "El mapa muestra cómo cambia el agua en cada pedazo de la región. Entre más alto el bloque, más grande el "
-            "cambio; azul quiere decir que la tendencia va hacia más agua y naranja, hacia menos. La línea amarilla "
-            "es el borde de la zona y las líneas delgadas, los 20 municipios (INEGI)."),
+            "El mapa muestra cómo cambia el agua en cada pedazo de la región. Entre más intenso el color, más grande "
+            "el cambio; azul quiere decir que la tendencia va hacia más agua y naranja, hacia menos. La línea "
+            "amarilla es el borde de la zona y las líneas delgadas, los 20 municipios (INEGI)."),
         "no_es.sequia": "Que llueva poco no significa que el suelo ya esté seco ni que los cultivos sufran: para eso "
                         "revisa la sección Agua del suelo.",
         "no_es.estres": "No mide directamente el estrés de los cultivos: que el suelo tenga poca agua no prueba que "

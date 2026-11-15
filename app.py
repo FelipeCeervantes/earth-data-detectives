@@ -261,64 +261,100 @@ def evidencias_indice(res: dict, clave: str, palabra: str) -> None:
     ], clave)
 
 
-def mapa_3d(celdas_t: pd.DataFrame, maximo: float, u_mapa: str) -> pdk.Deck:
-    """Celdas de POWER como bloques: altura = tamaño del cambio, color = dirección; brillantes si es segura."""
+def municipios_zona(id_zona: str) -> list[dict]:
+    """Municipios de la zona con su contorno (INEGI), su centro y su caja, para resaltarlos y hacer zoom."""
+    salida = []
+    for f in region.contorno(id_zona)["features"]:
+        if f["properties"]["tipo"] != "municipio":
+            continue
+        g = f["geometry"]
+        anillo = max(([g["coordinates"]] if g["type"] == "Polygon" else g["coordinates"]), key=lambda p: len(p[0]))[0]
+        lons, lats = [p[0] for p in anillo], [p[1] for p in anillo]
+        salida.append({"nombre": f["properties"]["nombre"], "rasgo": f, "lon": float(np.mean(lons)),
+                       "lat": float(np.mean(lats)), "caja": (min(lons), min(lats), max(lons), max(lats))})
+    return salida
+
+
+def celda_del_centro(celdas_t: pd.DataFrame, lon: float, lat: float) -> pd.Series:
+    """La celda de POWER más cercana al centro de un municipio."""
+    return celdas_t.loc[((celdas_t["lon"] - lon) ** 2 + (celdas_t["lat"] - lat) ** 2).idxmin()]
+
+
+def mapa_3d(celdas_t: pd.DataFrame, maximo: float, u_mapa: str, buscado: dict | None) -> pdk.Deck:
+    """Mapa 3D con interacción completa y sin bloques: cada celda de POWER va plana, con relleno suave del color de
+    su cambio y un borde que brilla (más fuerte si la tendencia es segura). El municipio buscado se resalta y la
+    cámara hace zoom ahí."""
     dl, dt = region.PASO_LON / 2, region.PASO_LAT / 2
-    bloques = []
+    celdas, bordes = [], []
     for _, c in celdas_t.iterrows():
         segura = c["color"] in SEGURAS
         v = E.VEREDICTO[c["color"]]
-        bloques.append({
-            "poligono": [[c["lon"] - dl, c["lat"] - dt], [c["lon"] + dl, c["lat"] - dt],
-                         [c["lon"] + dl, c["lat"] + dt], [c["lon"] - dl, c["lat"] + dt]],
-            "altura": 1500 + 26000 * abs(c["pendiente"]) / maximo,
-            "relleno": E.rgb(E.color_cambio(c["pendiente"], maximo)) + [235 if segura else 125],
-            "borde": [255, 255, 255, 235 if segura else 50],
-            "tip": (tx("donde.celda", lat=f"{c['lat']:.2f}", lon=f"{c['lon']:.3f}", peso=f"{c['peso']:.0%}")
-                    + "<br>" + tx("donde.por_decada", pend=f"{c['pendiente']:+.2f}", u=u_mapa, icono=v["icono"],
-                                  palabra=E.palabra(c["color"], idioma))
-                    + "<br>" + tx("donde.segura" if segura else "donde.no_segura")),
-        })
+        color = E.rgb(E.color_cambio(c["pendiente"], maximo))
+        cuadro = [[c["lon"] - dl, c["lat"] - dt], [c["lon"] + dl, c["lat"] - dt],
+                  [c["lon"] + dl, c["lat"] + dt], [c["lon"] - dl, c["lat"] + dt]]
+        celdas.append({"poligono": cuadro, "relleno": color + [175 if segura else 125],
+                       "tip": (tx("donde.celda", lat=f"{c['lat']:.2f}", lon=f"{c['lon']:.3f}", peso=f"{c['peso']:.0%}")
+                               + "\n" + tx("donde.por_decada", pend=f"{c['pendiente']:+.2f}", u=u_mapa,
+                                           icono=v["icono"], palabra=E.palabra(c["color"], idioma))
+                               + "\n" + re.sub(r"</?b>", "", tx("donde.segura" if segura else "donde.no_segura")))})
+        camino = cuadro + [cuadro[0]]
+        bordes.append({"camino": camino, "halo": (([255, 255, 255] if segura else color) + [95 if segura else 60]),
+                       "ancho_halo": 14 if segura else 9, "linea": ([255, 255, 255, 255] if segura else color + [235]),
+                       "ancho": 3.2 if segura else 1.6})
     contorno = region.contorno(id_zona)
     zona_geo = {"type": "FeatureCollection", "features": [f for f in contorno["features"]
                                                           if f["properties"]["tipo"] == "zona"]}
-    muni_geo = {"type": "FeatureCollection", "features": [f for f in contorno["features"]
-                                                          if f["properties"]["tipo"] == "municipio"]}
+    munis = municipios_zona(id_zona)
+    muni_geo = {"type": "FeatureCollection",  # cada municipio dice su nombre y que con un clic te acercas
+                "features": [{**m["rasgo"], "properties": {**m["rasgo"]["properties"],
+                                                           "tip": f"{m['nombre']}\n{tx('buscar.clic')}"}}
+                             for m in munis]}
     estaciones = [{"lon": s["lon"], "lat": s["lat"],
                    "tip": tx("donde.estacion", nombre=s["nombre"], municipio=s["municipio"])}
                   for _, s in contraste.estaciones(id_zona).iterrows()]
-    nombres = []
-    for f in muni_geo["features"]:  # el nombre de cada municipio, en el centro de su contorno
-        g = f["geometry"]
-        anillo = max(([g["coordinates"]] if g["type"] == "Polygon" else g["coordinates"]), key=lambda p: len(p[0]))[0]
-        nombres.append({"texto": f["properties"]["nombre"], "lon": float(np.mean([p[0] for p in anillo])),
-                        "lat": float(np.mean([p[1] for p in anillo]))})
+    pixeles = {"width_units": pdk.types.String("pixels"), "cap_rounded": True, "joint_rounded": True}
     capas = [
-        pdk.Layer("GeoJsonLayer", muni_geo, stroked=True, filled=False, get_line_color=[220, 235, 250, 140],
-                  line_width_min_pixels=1),
+        pdk.Layer("PolygonLayer", celdas, get_polygon="poligono", filled=True, stroked=False,
+                  get_fill_color="relleno", pickable=True, auto_highlight=True, highlight_color=[255, 255, 255, 60]),
+        pdk.Layer("PathLayer", bordes, get_path="camino", get_color="halo", get_width="ancho_halo", **pixeles),
+        pdk.Layer("PathLayer", bordes, get_path="camino", get_color="linea", get_width="ancho", **pixeles),
+        pdk.Layer("GeoJsonLayer", muni_geo, id="municipios", stroked=True, filled=True,
+                  get_fill_color=[255, 255, 255, 0], get_line_color=[220, 235, 250, 120], line_width_min_pixels=1,
+                  pickable=True, auto_highlight=True, highlight_color=[255, 212, 138, 70]),
+        pdk.Layer("GeoJsonLayer", zona_geo, stroked=True, filled=False, get_line_color=E.rgb(E.BORDE_ZONA) + [70],
+                  line_width_min_pixels=10),
         pdk.Layer("GeoJsonLayer", zona_geo, stroked=True, filled=False, get_line_color=E.rgb(E.BORDE_ZONA) + [255],
-                  line_width_min_pixels=3),
-        pdk.Layer("PolygonLayer", bloques, get_polygon="poligono", extruded=True, wireframe=True,
-                  get_elevation="altura", get_fill_color="relleno", get_line_color="borde", pickable=True,
-                  auto_highlight=True, highlight_color=[255, 255, 255, 70]),
+                  line_width_min_pixels=2.5),
+    ]
+    if buscado:  # el municipio buscado: relleno ámbar suave, halo ancho y borde blanco
+        geo = {"type": "FeatureCollection", "features": [buscado["rasgo"]]}
+        capas += [
+            pdk.Layer("GeoJsonLayer", geo, stroked=True, filled=True, get_fill_color=E.rgb(E.BORDE_ZONA) + [70],
+                      get_line_color=E.rgb(E.BORDE_ZONA) + [120], line_width_min_pixels=16),
+            pdk.Layer("GeoJsonLayer", geo, stroked=True, filled=False, get_line_color=[255, 255, 255, 255],
+                      line_width_min_pixels=3.5),
+        ]
+    capas += [
         pdk.Layer("ScatterplotLayer", estaciones, get_position=["lon", "lat"], get_radius=1500,
                   radius_min_pixels=3, get_fill_color=[255, 255, 255, 240], stroked=True,
                   get_line_color=E.rgb(E.CIELO_HONDO) + [255], line_width_min_pixels=1, pickable=True),
-        pdk.Layer("TextLayer", nombres, get_position=["lon", "lat"], get_text="texto", get_size=12,
-                  get_color=E.rgb(E.NUBE) + [235], get_text_anchor=pdk.types.String("middle"), get_alignment_baseline=pdk.types.String("center"),
-                  font_family="Figtree, Arial, sans-serif", font_settings={"sdf": True}, outline_width=3,
-                  outline_color=E.rgb(E.CIELO_ALTO) + [255], billboard=True,
-                  character_set=sorted(set("".join(n["texto"] for n in nombres))),
-                  parameters={"depthTest": False}),
     ]
-    vista = pdk.ViewState(latitude=float(celdas_t["lat"].mean()) - 0.12, longitude=float(celdas_t["lon"].mean()),
-                          zoom=7.15 if id_zona == "los-altos" else 7.7, pitch=52, bearing=-14)
-    # Sin mapa base: los bloques flotan sobre el vidrio azul, con los contornos y los nombres de INEGI
+    if buscado:  # zoom al municipio: que su caja llene el mapa
+        o, s_, e, n = buscado["caja"]
+        zoom = float(np.clip(np.log2(360 / max(e - o, (n - s_) * 1.25)) - 0.55, 8.2, 10.8))
+        vista = pdk.ViewState(latitude=(s_ + n) / 2 - 0.04, longitude=(o + e) / 2, zoom=zoom, pitch=48, bearing=-12,
+                              transition_duration=1200)
+    else:
+        vista = pdk.ViewState(latitude=float(celdas_t["lat"].mean()) - 0.12, longitude=float(celdas_t["lon"].mean()),
+                              zoom=7.2 if id_zona == "los-altos" else 7.75, pitch=45, bearing=-12,
+                              transition_duration=1200)
+    # Interacción completa: arrastrar, girar e inclinar (botón derecho o Ctrl), acercar con la rueda o doble clic
     return pdk.Deck(layers=capas, initial_view_state=vista, map_provider=None, map_style=None,
-                    views=[pdk.View(type="MapView", controller={"scrollZoom": False, "doubleClickZoom": False})],
-                    tooltip={"html": "{tip}", "style": {"backgroundColor": "rgba(6,26,51,0.94)", "color": E.NUBE,
+                    views=[pdk.View(type="MapView", controller=True)],
+                    tooltip={"text": "{tip}", "style": {"backgroundColor": "rgba(6,26,51,0.94)", "color": E.NUBE,
                                                          "fontFamily": E.PILA_TEXTO, "fontSize": "13px",
-                                                         "borderRadius": "12px", "padding": "8px 10px"}})
+                                                         "whiteSpace": "pre-line", "borderRadius": "12px",
+                                                         "padding": "8px 10px"}})
 
 
 # --- Controles: zona y periodo -------------------------------------------------------------
@@ -383,7 +419,32 @@ if vista == "resumen":
         celdas_t = pd.DataFrame()
     if not celdas_t.empty:
         maximo = float(celdas_t["pendiente"].abs().max()) or 1.0
-        st.pydeck_chart(mapa_3d(celdas_t, maximo, u_mapa), height=520, key="mapa3d")
+        munis = municipios_zona(id_zona)
+        nombres_munis = [m["nombre"] for m in munis]
+        # Clic en un municipio del mapa = buscarlo: se lee la selección del mapa anterior antes de dibujar el buscador.
+        # Solo cuenta una selección nueva (si no, borrar el buscador volvería a poner el municipio del último clic).
+        clave_previa = st.session_state.get("mapa3d_clave")
+        seleccion = (st.session_state.get(clave_previa) or {}).get("selection") or {} if clave_previa else {}
+        clic = (seleccion.get("objects") or {}).get("municipios") or []
+        if clic and (clave_previa, str(seleccion.get("indices"))) != st.session_state.get("mapa3d_aplicado"):
+            st.session_state["mapa3d_aplicado"] = (clave_previa, str(seleccion.get("indices")))
+            nombre_clic = (clic[0].get("properties") or {}).get("nombre")
+            if nombre_clic in nombres_munis:
+                st.session_state["buscar"] = nombre_clic
+        nombre_buscado = st.selectbox(tx("buscar.etiqueta"), nombres_munis, index=None, key="buscar",
+                                      placeholder=tx("buscar.placeholder"))
+        buscado = next((m for m in munis if m["nombre"] == nombre_buscado), None)
+        # La llave cambia con la zona y el municipio buscado: así el mapa se vuelve a crear y la cámara hace zoom ahí
+        clave_mapa = f"mapa3d_{id_zona}_{buscado['rasgo']['properties']['cvegeo'] if buscado else 'zona'}"
+        st.session_state["mapa3d_clave"] = clave_mapa
+        st.pydeck_chart(mapa_3d(celdas_t, maximo, u_mapa, buscado), height=560, key=clave_mapa,
+                        on_select="rerun", selection_mode="single-object")
+        if buscado:
+            c = celda_del_centro(celdas_t, buscado["lon"], buscado["lat"])
+            st.markdown(E.buscado_html(tx(
+                "buscar.resultado", nombre=buscado["nombre"], pend=f"{c['pendiente']:+.2f}", u=u_mapa,
+                icono=E.VEREDICTO[c["color"]]["icono"], palabra=E.palabra(c["color"], idioma),
+                segura=tx("tabla.si") if c["color"] in SEGURAS else tx("tabla.no"))), unsafe_allow_html=True)
         seguras = int(celdas_t["color"].isin(SEGURAS).sum())
         st.markdown(E.leyenda_mapa_html(maximo, u_mapa, seguras, len(celdas_t), idioma), unsafe_allow_html=True)
         st.caption(tx("mapa.ayuda"))

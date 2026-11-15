@@ -268,6 +268,11 @@ p.dd-etiqueta { font-family: var(--dd-titulos); font-size: .72rem !important; fo
   text-transform: uppercase; color: var(--dd-agua); margin-right: .45rem; }
 .dd-resumen p.dd-resumen__origen { font-size: .9rem !important; color: var(--dd-niebla); margin-top: .7rem !important; }
 
+/* Municipio buscado en el mapa */
+p.dd-buscado { background: var(--dd-vidrio-fuerte); border: 1px solid var(--dd-vidrio-borde); border-left: 4px solid #FFD48A;
+  border-radius: 14px; padding: .7rem 1rem; margin: .7rem 0 .2rem !important; font-size: 1.02rem !important;
+  color: var(--dd-nube); box-shadow: 0 0 24px -10px #FFD48A; }
+
 /* Leyenda del mapa */
 .dd-leyenda { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; font-size: .94rem; color: var(--dd-nube);
   margin: .55rem 0; }
@@ -359,7 +364,8 @@ def color_cambio(valor: float, maximo: float) -> str:
     if valor is None or maximo <= 0 or valor != valor:  # NaN
         return CALMA
     t = max(-1.0, min(1.0, valor / maximo))
-    return _mezcla(NEUTRO, MAS_AGUA if t > 0 else MENOS_AGUA, abs(t))
+    # Raíz cuadrada: los cambios chicos ya se distinguen del "sin cambio" (con escala lineal salían grises)
+    return _mezcla(NEUTRO, MAS_AGUA if t > 0 else MENOS_AGUA, abs(t) ** 0.5)
 
 
 # --- Piezas HTML ---------------------------------------------------------------------------
@@ -370,6 +376,11 @@ def hero_html(numero: str, pregunta: str, nota: str, idioma: str = "es") -> str:
             f'<p class="dd-hero__pregunta" role="heading" aria-level="1">{html.escape(pregunta)}</p>'
             f'<p class="dd-hero__numero">{T.t("caso.prefijo", idioma)} {html.escape(numero)}</p>'
             f'<p class="dd-hero__nota">{html.escape(nota)}</p></div>')
+
+
+def buscado_html(texto: str) -> str:
+    """Lo que dice el mapa del municipio buscado, en una tarjeta de vidrio con borde ámbar."""
+    return f'<p class="dd-buscado">{html.escape(texto)}</p>'
 
 
 def seccion_html(titulo: str) -> str:
