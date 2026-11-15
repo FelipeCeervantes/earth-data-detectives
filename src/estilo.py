@@ -1,6 +1,8 @@
-"""Identidad visual "Expediente de campo": tokens, CSS (una sola inyección), plantilla de Plotly y piezas HTML.
+"""Identidad visual "Cielo sobre tierra seca": tokens, CSS (una sola inyección), plantilla de Plotly y piezas HTML.
 
-Todo lo visual vive aquí; app.py solo lo usa. No calcula nada.
+El fondo es la atmósfera de Los Altos: cielo de lluvia arriba, tierra seca (con grietas tenues) abajo, nubes
+y calor difuminados; el contenido flota en paneles de vidrio esmerilado. Todo lo visual vive aquí; app.py
+solo lo usa. No calcula nada.
 Capas de tokens: primitivos (hex) → semánticos (para qué se usan) → componentes (veredicto, gráfica).
 """
 
@@ -15,27 +17,40 @@ import plotly.graph_objects as go
 from src import textos as T
 
 # --- 1. Primitivos -------------------------------------------------------------------------
-PAPEL = "#F5F0E6"
-TARJETA = "#FFFDF8"
-TINTA = "#1B2430"
-TINTA_SUAVE = "#5B6472"
-LINEA = "#D9CFBD"
-SENAL = "#E09F3E"  # acento de marca: detalles y foco, nunca texto sobre papel
-TINTA_PANEL = "#26303D"  # campos dentro de la barra lateral oscura
+# Contraste AA comprobado: noche y tinta suave sobre vidrio, bruma y polvo; ámbar y niebla sobre la barra nocturna.
+NOCHE = "#14212B"       # tinta del texto y cielo nocturno de la barra lateral
+NOCHE_2 = "#1F3443"     # final del degradado de la barra lateral
+BRUMA = "#D6E2E7"       # cielo húmedo, arriba
+NIEBLA = "#EEF2F1"      # transición, y "sin cambio" en el mapa
+POLVO = "#EAD7C0"       # tierra seca, abajo
+LLUVIA = "#2B6A86"      # más agua
+TIERRA = "#A3401F"      # menos agua: tierra colorada de Los Altos
+AMBAR = "#E2A24A"       # calor: detalles, foco y etiquetas sobre la barra (nunca texto sobre claro)
+GRIETA = "#8E5E3C"      # textura de suelo agrietado
 
-FUENTE_TITULOS = "Fraunces"
-FUENTE_TEXTO = "Atkinson Hyperlegible"
-FUENTE_NUMEROS = "IBM Plex Mono"
+PAPEL = NIEBLA          # (nombre heredado) neutro de las escalas
+TARJETA = "#FBFCFC"
+TINTA = NOCHE
+TINTA_SUAVE = "#465560"
+LINEA = "#C9D3D6"
+SENAL = AMBAR
+TINTA_PANEL = "#263C4C"  # campos dentro de la barra lateral
+
+FUENTE_TITULOS = "Bricolage Grotesque"          # robusta y terrosa, en ancho condensado: letrero de campo
+FUENTE_TEXTO = "Atkinson Hyperlegible Next"     # hecha para que la lea cualquiera
+FUENTE_NUMEROS = "Martian Mono"                 # lectura de instrumento de estación meteorológica
 
 # --- 2. Semánticos -------------------------------------------------------------------------
-FONDO = PAPEL
+FONDO = NIEBLA
 SUPERFICIE = TARJETA
 TEXTO = TINTA
 TEXTO_SECUNDARIO = TINTA_SUAVE
 BORDE = LINEA
 FOCO = SENAL
-PILA_TEXTO = f"'{FUENTE_TEXTO}', 'Segoe UI', system-ui, sans-serif"
-PILA_TITULOS = f"'{FUENTE_TITULOS}', Georgia, serif"
+VIDRIO = "rgba(255,255,255,0.64)"
+VIDRIO_BORDE = "rgba(255,255,255,0.78)"
+PILA_TEXTO = f"'{FUENTE_TEXTO}', 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif"
+PILA_TITULOS = f"'{FUENTE_TITULOS}', 'Segoe UI', system-ui, sans-serif"
 PILA_NUMEROS = f"'{FUENTE_NUMEROS}', ui-monospace, Consolas, monospace"
 
 # --- 3. Componentes: veredicto -------------------------------------------------------------
@@ -62,8 +77,8 @@ NIVEL = {
 }
 # Bandas de fondo de las gráficas de índices: (desde, hasta, nivel, etiqueta corta)
 BANDAS = [(-1.5, -1.0, "moderado", "moderada"), (-2.0, -1.5, "severo", "severa"), (-4.0, -2.0, "extremo", "extrema")]
-MENOS_AGUA = "#A83F1B"   # óxido
-MAS_AGUA = "#1F6F8B"     # azul petróleo
+MENOS_AGUA = TIERRA   # tierra colorada
+MAS_AGUA = LLUVIA     # azul de lluvia
 
 
 def palabra(color: str, idioma: str) -> str:
@@ -76,10 +91,11 @@ def rgba(hex_color: str, alfa: float) -> str:
     return f"rgba({r},{g},{b},{alfa})"
 
 
-# --- Textura: curvas de nivel (SVG en CSS, opacidad baja) ----------------------------------
-_CURVAS_SVG = (
+# --- Texturas (SVG dentro del CSS) ---------------------------------------------------------
+# Isobaras: las líneas de presión de un mapa del tiempo, en el encabezado del caso.
+_ISOBARAS_SVG = (
     "<svg xmlns='http://www.w3.org/2000/svg' width='640' height='260' viewBox='0 0 640 260'>"
-    f"<g fill='none' stroke='{LINEA}' stroke-width='1.2' stroke-opacity='0.9'>"
+    f"<g fill='none' stroke='{LLUVIA}' stroke-width='1.2' stroke-opacity='0.28'>"
     "<path d='M-10 210 C 90 170 170 240 280 200 S 470 130 650 180'/>"
     "<path d='M-10 180 C 100 140 180 205 290 168 S 460 100 650 150'/>"
     "<path d='M-10 150 C 110 112 190 172 300 138 S 450 72 650 120'/>"
@@ -90,49 +106,118 @@ _CURVAS_SVG = (
     "<path d='M-10 110 C 60 90 120 120 190 98 S 300 40 390 60'/>"
     "</g></svg>"
 )
-CURVAS_URL = "data:image/svg+xml;utf8," + quote(_CURVAS_SVG)
+CURVAS_URL = "data:image/svg+xml;utf8," + quote(_ISOBARAS_SVG)
+
+# Suelo agrietado: un mosaico que se repite sin costuras (los bordes coinciden); solo se ve abajo del fondo.
+_GRIETAS_SVG = (
+    "<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240' viewBox='0 0 240 240'>"
+    f"<g fill='none' stroke='{GRIETA}' stroke-width='1.1' stroke-linecap='round' stroke-linejoin='round' "
+    "stroke-opacity='0.42'>"
+    "<path d='M0 40 L38 52 L61 30 L102 46 L131 20 L170 38 L204 26 L240 40'/>"
+    "<path d='M61 30 L70 0'/><path d='M131 20 L138 0'/>"
+    "<path d='M38 52 L30 96 L52 128 L40 170 L60 204 L70 240'/>"
+    "<path d='M102 46 L96 88 L128 112 L120 150 L150 176 L142 214 L138 240'/>"
+    "<path d='M170 38 L176 80 L210 100 L240 96'/><path d='M0 96 L30 96'/>"
+    "<path d='M176 80 L150 104 L128 112'/>"
+    "<path d='M0 152 L22 146 L52 128 L84 138 L120 150'/>"
+    "<path d='M210 100 L216 140 L240 152'/><path d='M216 140 L190 168 L150 176'/>"
+    "<path d='M0 214 L28 200 L60 204 L96 222 L142 214 L190 228 L240 214'/>"
+    "<path d='M190 168 L198 200 L190 228'/>"
+    "</g></svg>"
+)
+GRIETAS_URL = "data:image/svg+xml;utf8," + quote(_GRIETAS_SVG)
 
 # --- CSS (una sola inyección) --------------------------------------------------------------
 _CSS = Template("""
-/* Expediente de campo: lo que el tema nativo de Streamlit no cubre */
+/* Cielo sobre tierra seca: lo que el tema nativo de Streamlit no cubre.
+   Ojo: nada de etiquetas HTML ni signos de mayor o menor en esta CSS, o st.html descarta todo el bloque. */
 :root {
   --dd-papel: $papel; --dd-tarjeta: $tarjeta; --dd-tinta: $tinta; --dd-tinta-suave: $tinta_suave;
-  --dd-linea: $linea; --dd-senal: $senal;
+  --dd-linea: $linea; --dd-senal: $senal; --dd-lluvia: $lluvia; --dd-tierra: $tierra;
+  --dd-vidrio: $vidrio; --dd-vidrio-borde: $vidrio_borde;
+  --dd-sombra: 0 12px 32px -16px rgba(20,33,43,0.32), inset 0 1px 0 rgba(255,255,255,0.85);
   --dd-texto: $pila_texto; --dd-titulos: $pila_titulos; --dd-numeros: $pila_numeros;
 }
 
+/* La atmósfera: nubes y calor difuminados sobre un cielo de lluvia que baja hasta tierra seca agrietada */
+.stApp {
+  background-color: $niebla !important;
+  background-image:
+    radial-gradient(62vw 42vh at 10% 6%, rgba(255,255,255,0.80), rgba(255,255,255,0) 70%),
+    radial-gradient(52vw 36vh at 80% 12%, rgba(43,106,134,0.20), rgba(43,106,134,0) 70%),
+    radial-gradient(40vw 26vh at 46% 30%, rgba(255,255,255,0.55), rgba(255,255,255,0) 70%),
+    radial-gradient(58vw 42vh at 90% 94%, rgba(226,162,74,0.30), rgba(226,162,74,0) 70%),
+    radial-gradient(46vw 32vh at 14% 98%, rgba(163,64,31,0.14), rgba(163,64,31,0) 70%),
+    linear-gradient(180deg, $bruma 0%, $niebla 40%, rgba(238,242,241,0) 74%),
+    url("$grietas"),
+    linear-gradient(180deg, $bruma 0%, $niebla 46%, $polvo 100%) !important;
+  background-size: auto, auto, auto, auto, auto, auto, 240px 240px, auto !important;
+  background-attachment: fixed !important;
+}
+[data-testid="stHeader"], [data-testid="stBottomBlockContainer"] { background: transparent !important; }
+html, body { background: $polvo; }
+
+/* Vidrio esmerilado: los paneles flotan sobre el cielo */
+.dd-caso, .dd-significa, .dd-tarjeta, .dd-resumen, [class*="st-key-evidencia"],
+[data-testid="stPlotlyChart"], [data-testid="stIFrame"], [data-testid="stExpander"] details {
+  background: var(--dd-vidrio) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%); backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid var(--dd-vidrio-borde) !important; border-radius: 14px !important;
+  box-shadow: var(--dd-sombra);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .dd-caso, .dd-significa, .dd-tarjeta, .dd-resumen, [class*="st-key-evidencia"],
+  [data-testid="stPlotlyChart"], [data-testid="stIFrame"], [data-testid="stExpander"] details {
+    background: rgba(255,255,255,0.92) !important; }
+}
+[data-testid="stPlotlyChart"] { padding: .6rem .4rem .2rem; }
+[data-testid="stIFrame"] { padding: 4px; overflow: hidden; }
+
+/* Barra lateral: cielo nocturno, con la humedad arriba y el calor que sube desde abajo */
+section[data-testid="stSidebar"] {
+  background:
+    radial-gradient(120% 55% at 15% 0%, rgba(43,106,134,0.55), rgba(43,106,134,0) 62%),
+    radial-gradient(120% 45% at 85% 100%, rgba(226,162,74,0.30), rgba(226,162,74,0) 62%),
+    linear-gradient(180deg, $noche 0%, $noche_2 100%) !important;
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+section[data-testid="stSidebar"] [data-testid="stSidebarContent"] { background: transparent !important; }
+
 /* Marca superior */
 .dd-marca { display: flex; align-items: baseline; gap: .75rem; flex-wrap: wrap;
-  border-bottom: 1px solid var(--dd-linea); padding-bottom: .6rem; margin-bottom: .25rem; }
-.dd-marca__nombre { font-family: var(--dd-titulos); font-weight: 700; font-size: 1.35rem;
+  border-bottom: 1px solid rgba(20,33,43,0.14); padding-bottom: .6rem; margin-bottom: .25rem; }
+.dd-marca__nombre { font-family: var(--dd-titulos); font-weight: 760; font-stretch: 82%; font-size: 1.45rem;
   color: var(--dd-tinta); letter-spacing: -.01em; }
-.dd-marca__lema { font-family: var(--dd-numeros); font-size: .78rem; text-transform: uppercase;
-  letter-spacing: .1em; color: var(--dd-tinta-suave); }
+.dd-marca__lema { font-family: var(--dd-numeros); font-size: .7rem; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--dd-tinta-suave); }
 
-/* Encabezado de expediente con curvas de nivel */
-.dd-caso { position: relative; background-color: var(--dd-tarjeta);
-  background-image: url("$curvas"); background-repeat: no-repeat; background-position: right -40px top -10px;
-  background-size: 640px 260px; border: 1px solid var(--dd-linea); border-left: 6px solid var(--dd-tinta);
-  border-radius: 4px; padding: 1.25rem 1.5rem 1.35rem; margin: .5rem 0 1.25rem; overflow: hidden; }
-.dd-caso__numero { font-family: var(--dd-numeros); font-size: .8rem; font-weight: 600; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--dd-tinta-suave); margin: 0 0 .4rem; }
-.dd-caso__numero::before { content: ""; display: inline-block; width: .6rem; height: .6rem;
-  background: var(--dd-senal); margin-right: .55rem; vertical-align: .05rem; }
-/* Streamlit fija el tamaño de los párrafos del markdown: estas reglas necesitan !important.
-   Ojo: nada de etiquetas HTML escritas dentro de esta CSS, o st.html descarta todo el bloque. */
-.dd-caso p.dd-caso__pregunta { font-family: var(--dd-titulos) !important; font-weight: 650; color: var(--dd-tinta);
-  font-size: clamp(1.8rem, 3.6vw, 2.75rem) !important; line-height: 1.08 !important; letter-spacing: -.015em;
-  margin: 0 !important; max-width: 22ch; font-variation-settings: "opsz" 96; }
-.dd-caso p.dd-caso__numero { font-size: .8rem !important; }
-.dd-caso p.dd-caso__nota { font-size: .98rem !important; color: var(--dd-tinta-suave); margin: .6rem 0 0 !important;
+/* Encabezado del caso: vidrio con isobaras, y una franja que baja de la lluvia a la tierra seca */
+.dd-caso { position: relative; background-image: url("$curvas") !important; background-repeat: no-repeat;
+  background-position: right -40px top -10px; background-size: 640px 260px;
+  padding: 1.35rem 1.6rem 1.45rem 1.9rem; margin: .5rem 0 1.25rem; overflow: hidden; }
+.dd-caso::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 7px;
+  background: linear-gradient(180deg, $lluvia 0%, $senal 55%, $tierra 100%); }
+.dd-caso__numero { font-family: var(--dd-numeros); font-size: .74rem; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--dd-tinta-suave); margin: 0 0 .5rem; }
+.dd-caso__numero::before { content: ""; display: inline-block; width: .55rem; height: .55rem; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff 0%, $lluvia 60%); margin-right: .55rem; vertical-align: .05rem; }
+/* Streamlit fija el tamaño de los párrafos del markdown: estas reglas necesitan !important. */
+.dd-caso p.dd-caso__pregunta { font-family: var(--dd-titulos) !important; font-weight: 780; font-stretch: 80%;
+  color: var(--dd-tinta); font-size: clamp(2rem, 4.2vw, 3.2rem) !important; line-height: 1 !important;
+  letter-spacing: -.02em; margin: 0 !important; max-width: 20ch; font-optical-sizing: auto; }
+.dd-caso p.dd-caso__numero { font-size: .74rem !important; }
+.dd-caso p.dd-caso__nota { font-size: 1rem !important; color: var(--dd-tinta-suave); margin: .7rem 0 0 !important;
   max-width: 60ch; }
 p.dd-veredicto__texto { font-size: 1.08rem !important; }
 
-/* Veredicto como sello */
-.dd-veredicto { display: flex; align-items: center; gap: 1.25rem 1.75rem; flex-wrap: wrap; margin: .25rem 0 1rem; }
+/* Veredicto como sello, sobre un vidrio propio */
+.dd-veredicto { display: flex; align-items: center; gap: 1.25rem 1.75rem; flex-wrap: wrap; margin: .25rem 0 1rem;
+  padding: .9rem 1.1rem; border-radius: 14px; background: rgba(255,255,255,0.42);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.6); }
 .dd-sello { display: inline-block; transform: rotate(-1.5deg); border: 5px double currentColor;
-  border-radius: 3px; padding: .55rem 1rem .5rem; font-family: var(--dd-numeros); font-weight: 700;
-  font-size: 1.2rem; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; max-width: 100%; }
+  border-radius: 4px; padding: .55rem 1rem .5rem; font-family: var(--dd-numeros); font-weight: 700;
+  font-size: 1.05rem; letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; max-width: 100%;
+  box-shadow: 0 6px 18px -10px rgba(20,33,43,0.5); }
 .dd-sello__icono { margin-right: .45rem; }
 .dd-veredicto__texto { flex: 1 1 20rem; font-size: 1.08rem; line-height: 1.55; color: var(--dd-tinta); margin: 0; }
 @keyframes dd-sellar { from { opacity: 0; transform: rotate(-1.5deg) scale(1.14); }
@@ -147,35 +232,47 @@ p.dd-veredicto__texto { font-size: 1.08rem !important; }
 [data-testid="stColumn"]:has([class*="st-key-evidencia"]) { align-self: stretch; }
 [data-testid="stColumn"]:has([class*="st-key-evidencia"]) [data-testid="stVerticalBlock"],
 [data-testid="stColumn"]:has([class*="st-key-evidencia"]) [data-testid="stLayoutWrapper"] { height: 100%; }
-[class*="st-key-evidencia"] { background: var(--dd-tarjeta); }
-[data-testid="stMetricLabel"] p { font-family: var(--dd-numeros); font-size: .74rem !important; font-weight: 600;
-  letter-spacing: .08em; text-transform: uppercase; color: var(--dd-tinta-suave); }
+[data-testid="stMetricLabel"] p { font-family: var(--dd-numeros); font-size: .68rem !important; font-weight: 600;
+  letter-spacing: .06em; text-transform: uppercase; color: var(--dd-tinta-suave); }
 [data-testid="stMetricLabel"], [data-testid="stMetricLabel"] * { white-space: normal !important;
   overflow: visible !important; text-overflow: clip !important; }
 [data-testid="stMetricValue"] { font-family: var(--dd-numeros); font-variant-numeric: tabular-nums;
-  letter-spacing: -.02em; color: var(--dd-tinta); font-size: clamp(1.45rem, 2.1vw, 2rem) !important;
+  letter-spacing: -.03em; color: var(--dd-tinta); font-size: clamp(1.35rem, 2vw, 1.85rem) !important;
   line-height: 1.15 !important; }
-/* Unidades largas (mm/día, kWh/m²/día): que el número baje de línea en vez de cortarse con "…" */
+/* Unidades largas: que el número baje de línea en vez de cortarse con puntos suspensivos */
 [data-testid="stMetricValue"], [data-testid="stMetricValue"] * { white-space: normal !important;
   overflow: visible !important; text-overflow: clip !important; }
 [class*="st-key-evidencia"] [data-testid="stCaptionContainer"] p { font-size: .9rem; line-height: 1.45; }
 
-/* Pestañas y barra lateral: etiquetas de instrumento */
-[data-testid="stTab"] p, [role="tab"] p { font-family: var(--dd-numeros) !important; font-size: .82rem !important;
-  font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
-.dd-panel { font-family: var(--dd-numeros); font-size: .76rem; font-weight: 600; letter-spacing: .14em;
+/* Pestañas: una barra de vidrio, como la de un tablero de estación. Si no caben, pasan a otra fila:
+   las seis se ven siempre, también en el celular. */
+[data-testid="stTabs"] [role="tablist"] { flex-wrap: wrap; gap: .25rem; padding: .35rem; border-radius: 18px;
+  overflow: visible; background: rgba(255,255,255,0.5); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.7); box-shadow: var(--dd-sombra); margin-bottom: .6rem; }
+[data-testid="stTabs"] [role="tablist"]::after { display: none !important; }
+[data-testid="stTab"] p, [role="tab"] p { font-family: var(--dd-numeros) !important; font-size: .7rem !important;
+  font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+[role="tab"] { border-radius: 12px; padding: .4rem .75rem !important; height: auto !important; }
+[role="tab"][aria-selected="true"] { background: $noche !important; }
+[role="tab"][aria-selected="true"] p { color: #FFFFFF !important; }
+
+/* Barra lateral: etiquetas de instrumento */
+.dd-panel { font-family: var(--dd-numeros); font-size: .7rem; font-weight: 700; letter-spacing: .12em;
   text-transform: uppercase; color: var(--dd-senal); margin: 0 0 .25rem; }
 section[data-testid="stSidebar"] [data-testid="stWidgetLabel"] p { font-family: var(--dd-numeros);
-  font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+  font-size: .7rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+
+/* Títulos de sección con la fuente de letrero */
+h1, h2, h3 { font-stretch: 82%; letter-spacing: -.01em; }
 
 /* Pie: fuentes del expediente */
-.dd-fuentes { border-top: 1px solid var(--dd-linea); margin-top: 1.5rem; padding-top: .9rem;
+.dd-fuentes { border-top: 1px solid rgba(20,33,43,0.14); margin-top: 1.5rem; padding-top: .9rem;
   font-size: .9rem; color: var(--dd-tinta-suave); line-height: 1.55; }
-.dd-fuentes__titulo { font-family: var(--dd-numeros); font-size: .74rem; font-weight: 600; letter-spacing: .14em;
+.dd-fuentes__titulo { font-family: var(--dd-numeros); font-size: .7rem; font-weight: 600; letter-spacing: .1em;
   text-transform: uppercase; color: var(--dd-tinta); margin: 0 0 .35rem; }
 .dd-fuentes a { color: var(--dd-tinta); text-decoration-color: var(--dd-senal); text-underline-offset: 3px; }
 
-/* Foco visible con teclado: anillo de tinta + halo de señal (en la barra oscura, solo señal) */
+/* Foco visible con teclado: anillo de tinta + halo ámbar (en la barra oscura, solo ámbar) */
 :focus-visible { outline: 3px solid var(--dd-tinta) !important; outline-offset: 2px;
   box-shadow: 0 0 0 6px var(--dd-senal) !important; }
 section[data-testid="stSidebar"] :focus-visible { outline-color: var(--dd-senal) !important; box-shadow: none !important; }
@@ -183,68 +280,71 @@ section[data-testid="stSidebar"] :focus-visible { outline-color: var(--dd-senal)
 [role="tab"]:focus-visible { outline-offset: -3px; box-shadow: none !important; background: $senal_suave; }
 
 /* Recuadro "¿Qué significa?" y "Fuente y limitaciones" */
-.dd-significa { background: var(--dd-tarjeta); border: 1px solid var(--dd-linea); border-left: 4px solid var(--dd-senal);
-  border-radius: 4px; padding: .85rem 1.1rem; margin: .25rem 0 1.1rem; }
-p.dd-etiqueta { font-family: var(--dd-numeros); font-size: .74rem !important; font-weight: 600; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--dd-tinta-suave); margin: 0 0 .3rem !important; }
+.dd-significa { position: relative; padding: .95rem 1.2rem .95rem 1.45rem; margin: .25rem 0 1.1rem; overflow: hidden; }
+.dd-significa::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+  background: linear-gradient(180deg, $lluvia, $senal); }
+p.dd-etiqueta { font-family: var(--dd-numeros); font-size: .68rem !important; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--dd-tinta-suave); margin: 0 0 .35rem !important; }
 .dd-significa p.dd-significa__texto { font-size: 1.02rem !important; line-height: 1.55; margin: 0 !important; color: var(--dd-tinta); }
 .dd-significa p.dd-significa__no { font-size: .96rem !important; margin: .55rem 0 0 !important; color: var(--dd-tinta); }
-.dd-limites { border-top: 1px dashed var(--dd-linea); margin-top: 1.25rem; padding-top: .6rem; }
+.dd-limites { border-top: 1px dashed rgba(20,33,43,0.2); margin-top: 1.25rem; padding-top: .6rem; }
 .dd-limites p { font-size: .9rem !important; color: var(--dd-tinta-suave); margin: 0 0 .2rem !important; line-height: 1.5; }
 
-/* Tarjetas del resumen, en palabras */
+/* Tarjetas del resumen, en palabras: vidrio con una franja del color del veredicto */
 .dd-tarjetas { display: grid; grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr)); gap: .9rem; margin: .5rem 0 1.25rem; }
-.dd-tarjeta { background: var(--dd-tarjeta); border: 1px solid var(--dd-linea); border-top: 4px solid currentColor;
-  border-radius: 4px; padding: .8rem 1rem .9rem; }
+.dd-tarjeta { position: relative; padding: 1rem 1.05rem .95rem; overflow: hidden; }
+.dd-tarjeta::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: currentColor; }
 .dd-tarjeta p { margin: 0 !important; }
-.dd-tarjeta p.dd-tarjeta__valor { font-family: var(--dd-numeros); font-weight: 700; font-size: 1.15rem !important;
-  line-height: 1.3; margin: .2rem 0 .35rem !important; }
+.dd-tarjeta p.dd-tarjeta__valor { font-family: var(--dd-numeros); font-weight: 700; font-size: 1.05rem !important;
+  line-height: 1.3; margin: .25rem 0 .4rem !important; }
 .dd-tarjeta p.dd-tarjeta__texto { font-size: .95rem !important; line-height: 1.45; color: var(--dd-tinta); }
 
 /* Resumen en palabras sencillas */
-.dd-resumen { border: 1px solid var(--dd-linea); background: var(--dd-tarjeta); border-radius: 4px; padding: 1.1rem 1.35rem; }
-.dd-resumen p.dd-resumen__titular { font-family: var(--dd-titulos); font-weight: 650;
-  font-size: clamp(1.35rem, 2.6vw, 1.8rem) !important; line-height: 1.15 !important; margin: 0 0 .5rem !important;
-  color: var(--dd-tinta); }
+.dd-resumen { padding: 1.2rem 1.45rem; }
+.dd-resumen p.dd-resumen__titular { font-family: var(--dd-titulos); font-weight: 760; font-stretch: 82%;
+  font-size: clamp(1.45rem, 2.8vw, 2rem) !important; line-height: 1.08 !important; margin: 0 0 .55rem !important;
+  color: var(--dd-tinta); letter-spacing: -.015em; }
 .dd-resumen p, .dd-resumen li { font-size: 1.02rem !important; line-height: 1.55; }
 .dd-resumen ul { margin: .4rem 0 .8rem 1.1rem; padding: 0; }
-.dd-resumen .dd-resumen__tema { font-family: var(--dd-numeros); font-size: .74rem; letter-spacing: .1em;
-  text-transform: uppercase; color: var(--dd-tinta-suave); margin-right: .4rem; }
+.dd-resumen .dd-resumen__tema { font-family: var(--dd-numeros); font-size: .66rem; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--dd-lluvia); margin-right: .45rem; }
 .dd-resumen p.dd-resumen__origen { font-size: .88rem !important; color: var(--dd-tinta-suave); margin-top: .6rem !important; }
 
 /* Leyenda del mapa */
 .dd-leyenda { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; font-size: .92rem; color: var(--dd-tinta);
   margin: .4rem 0; }
-.dd-leyenda__barra { width: 11rem; max-width: 45vw; height: .7rem; border: 1px solid var(--dd-linea);
-  background: linear-gradient(90deg, $menos_agua, $papel, $mas_agua); }
-
-.dd-leyenda__muestra { display: inline-block; width: 1.6rem; height: 1rem; background: var(--dd-tarjeta); }
+.dd-leyenda__barra { width: 11rem; max-width: 45vw; height: .7rem; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.8); background: linear-gradient(90deg, $menos_agua, $papel, $mas_agua); }
+.dd-leyenda__muestra { display: inline-block; width: 1.6rem; height: 1rem; border-radius: 3px; background: rgba(255,255,255,0.7); }
 .dd-leyenda__muestra--segura { border: 4px solid var(--dd-tinta); }
 .dd-leyenda__muestra--no { border: 2px dashed var(--dd-tinta-suave); }
 
 /* Pantallas angostas (375 px) */
 @media (max-width: 640px) {
-  .dd-caso { padding: 1rem 1rem 1.1rem; background-position: right -260px top -30px; }
-  .dd-sello { white-space: normal; font-size: 1.02rem; }
+  .dd-caso { padding: 1.05rem 1rem 1.15rem 1.3rem; background-position: right -260px top -30px; }
+  .dd-sello { white-space: normal; font-size: .95rem; }
   .dd-marca__lema { display: none; }
+  [data-testid="stTabs"] [data-baseweb="tab-list"] { border-radius: 16px; }
 }
 """)
 
 CSS = "<style>" + _CSS.substitute(
     papel=PAPEL, tarjeta=TARJETA, tinta=TINTA, tinta_suave=TINTA_SUAVE, linea=LINEA, senal=SENAL,
+    lluvia=LLUVIA, tierra=TIERRA, niebla=NIEBLA, bruma=BRUMA, polvo=POLVO, noche=NOCHE, noche_2=NOCHE_2,
+    vidrio=VIDRIO, vidrio_borde=VIDRIO_BORDE, grietas=GRIETAS_URL,
     pila_texto=PILA_TEXTO, pila_titulos=PILA_TITULOS, pila_numeros=PILA_NUMEROS, curvas=CURVAS_URL,
-    senal_suave=rgba(SENAL, 0.22), menos_agua="#A83F1B", mas_agua="#1F6F8B",
+    senal_suave=rgba(SENAL, 0.22), menos_agua=MENOS_AGUA, mas_agua=MAS_AGUA,
 ) + "</style>"
 
 # --- Plantilla de Plotly -------------------------------------------------------------------
-_EJE = dict(gridcolor=LINEA, griddash="dot", gridwidth=1, linecolor=LINEA, zerolinecolor=TINTA_SUAVE,
+_EJE = dict(gridcolor="rgba(20,33,43,0.10)", griddash="dot", gridwidth=1, linecolor="rgba(20,33,43,0.18)", zerolinecolor=TINTA_SUAVE,
             tickfont=dict(family=PILA_NUMEROS, size=12, color=TINTA_SUAVE),
             title=dict(font=dict(family=PILA_TEXTO, size=13, color=TINTA_SUAVE)))
 PLANTILLA = go.layout.Template(layout=dict(
     font=dict(family=PILA_TEXTO, size=14, color=TINTA),
     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
     xaxis=_EJE, yaxis=_EJE,
-    hoverlabel=dict(bgcolor=TARJETA, bordercolor=LINEA, font=dict(family=PILA_NUMEROS, size=13, color=TINTA)),
+    hoverlabel=dict(bgcolor="rgba(251,252,252,0.94)", bordercolor=LINEA, font=dict(family=PILA_NUMEROS, size=13, color=TINTA)),
     legend=dict(font=dict(family=PILA_TEXTO, size=13, color=TINTA_SUAVE), bgcolor="rgba(0,0,0,0)"),
     separators=".,",
 ))
@@ -276,7 +376,7 @@ def _mezcla(a: str, b: str, t: float) -> str:
 
 
 def color_cambio(valor: float, maximo: float) -> str:
-    """Escala divergente del mapa: óxido = hacia menos agua, papel = sin cambio, azul petróleo = hacia más agua."""
+    """Escala divergente del mapa: tierra colorada = hacia menos agua, niebla = sin cambio, lluvia = hacia más agua."""
     if valor is None or maximo <= 0 or valor != valor:  # NaN
         return LINEA
     t = max(-1.0, min(1.0, valor / maximo))
@@ -288,7 +388,7 @@ def anotacion(x, y, texto: str, color: str, derecha: bool) -> dict:
     return dict(x=x, y=y, text=texto, showarrow=True, arrowhead=0, arrowwidth=1.5, arrowcolor=color,
                 ax=-36 if derecha else 36, ay=-48 if derecha else 48, xanchor="right" if derecha else "left",
                 font=dict(family=PILA_NUMEROS, size=13, color=TINTA), align="left",
-                bgcolor=TARJETA, bordercolor=color, borderwidth=1.5, borderpad=5)
+                bgcolor="rgba(251,252,252,0.9)", bordercolor=color, borderwidth=1.5, borderpad=5)
 
 
 # --- Piezas HTML ---------------------------------------------------------------------------

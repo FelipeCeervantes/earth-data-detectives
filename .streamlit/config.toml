@@ -1,28 +1,28 @@
-# Identidad "Expediente de campo" (ver docs/marca.md). Sin logos ni colores de la NASA.
+# Identidad "Cielo sobre tierra seca" (ver docs/marca.md). Sin logos ni colores de la NASA.
 # Los mismos valores viven en src/estilo.py; si cambias uno, cambia el otro.
 [theme]
 base = "light"
-primaryColor = "#1B2430"               # tinta: controles, pestaña activa
-backgroundColor = "#F5F0E6"            # papel
-secondaryBackgroundColor = "#EFE8DA"   # campos sobre papel
-textColor = "#1B2430"                  # tinta
-linkColor = "#1B2430"
-borderColor = "#D9CFBD"                # línea
+primaryColor = "#14212B"               # noche: controles, pestaña activa
+backgroundColor = "#EEF2F1"            # niebla (el cielo y la tierra los pinta src/estilo.py)
+secondaryBackgroundColor = "#F7F9F9"   # campos sobre el vidrio
+textColor = "#14212B"                  # noche
+linkColor = "#14212B"
+borderColor = "#C9D3D6"
 showWidgetBorder = true
-baseRadius = "0.25rem"
-font = "Atkinson Hyperlegible:https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap"
-headingFont = "Fraunces:https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500..800&display=swap"
-codeFont = "IBM Plex Mono:https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&display=swap"
-headingFontWeights = 650
-metricValueFontSize = "2rem"
+baseRadius = "0.6rem"
+font = "Atkinson Hyperlegible Next:https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,400..700;1,400..700&display=swap"
+headingFont = "Bricolage Grotesque:https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&display=swap"
+codeFont = "Martian Mono:https://fonts.googleapis.com/css2?family=Martian+Mono:wdth,wght@87.5,400..700&display=swap"
+headingFontWeights = 760
+metricValueFontSize = "1.85rem"
 
 [theme.sidebar]
-backgroundColor = "#1B2430"            # panel del detective (tinta)
-secondaryBackgroundColor = "#26303D"
-textColor = "#F5F0E6"
-primaryColor = "#E09F3E"               # señal
-linkColor = "#E09F3E"
-borderColor = "#3A4554"
+backgroundColor = "#14212B"            # cielo nocturno (el degradado lo pone src/estilo.py)
+secondaryBackgroundColor = "#263C4C"
+textColor = "#EEF2F1"
+primaryColor = "#E2A24A"               # ámbar
+linkColor = "#E2A24A"
+borderColor = "#3A5263"
 
 [client]
 toolbarMode = "viewer"   # sin el botón "Deploy" ni menús de desarrollador
