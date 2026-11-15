@@ -1,5 +1,7 @@
 # Earth Data Detectives · Python 3.11 or newer
 streamlit>=1.67
+# Streamlit Cloud swaps pyarrow 26 for <25 (known segfault); pinning it here avoids a reinstall on every update
+pyarrow<25
 pandas>=2.2
 numpy>=1.26
 scipy>=1.13
