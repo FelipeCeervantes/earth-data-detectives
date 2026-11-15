@@ -15,7 +15,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-from src import catalogo, datos, explicar, indices, region
+from src import catalogo, contraste, datos, explicar, indices, region
 from src import estilo as E
 from src import textos as T
 from src.analisis import (anios_para_significancia, anomalias, cambio_total, mann_kendall, tendencia_ols,
@@ -348,6 +348,32 @@ with t_lluvia:
         st.caption(tx("lluvia.acum.incompletos", lista=", ".join(map(str, incompletos))))
     limites("lluvia")
 
+    st.markdown(f"##### {tx('est.titulo')}")
+    st.caption(tx("est.intro"))
+    est_zona = contraste.estaciones(id_zona)
+    comp_est = contraste.comparar_lluvia(lluvia, contraste.lluvia_estaciones(id_zona).loc[periodo])
+    if comp_est is None:
+        st.info(tx("est.sin"))
+    else:
+        evidencias([
+            (tx("est.n.titulo"), str(len(est_zona)), tx("est.n.nota"), ""),
+            (tx("est.r.titulo"), f"{comp_est['r_anual']:.2f}", tx("est.r.nota", n=comp_est["anios"]),
+             tx("est.r.ayuda")),
+            (tx("est.dif.titulo"), f"{comp_est['diferencia_pct']:+.0f} %", tx("est.dif.nota"), ""),
+        ], "estaciones")
+        anual = comp_est["anual"]
+        fig = go.Figure([
+            go.Scatter(x=anual.index, y=anual["estaciones"], name=tx("est.graf.est"), mode="lines+markers",
+                       line=dict(color=E.TINTA, width=2, dash="dot"), hovertemplate="%{y:.0f} mm<extra></extra>"),
+            go.Scatter(x=anual.index, y=anual["power"], name=tx("est.graf.power"), mode="lines+markers",
+                       line=dict(color=E.MAS_AGUA, width=3), hovertemplate="%{y:.0f} mm<extra></extra>"),
+        ])
+        fig.update_layout(template=E.PLANTILLA, height=340, margin=dict(t=40, b=10, l=10, r=10),
+                          xaxis_title=tx("graf.anio"), yaxis_title=tx("est.graf.eje"),
+                          legend=dict(orientation="h", y=1.14, x=0), hovermode="x unified")
+        st.plotly_chart(fig, width="stretch", config=E.config_grafica(idioma), key="grafica_estaciones")
+    st.markdown(E.limites_html(tx("est.fuente", n=len(est_zona)), tx("est.limite"), idioma), unsafe_allow_html=True)
+
 # --- Sequía meteorológica ------------------------------------------------------------------
 with t_sequia:
     significa("sequia")
@@ -359,7 +385,45 @@ with t_sequia:
         grafica_indice(spi_p.dropna(), "spi", f"SPI-{escala}", "spi")
     except ValueError as e:
         st.warning(tx("error.spi", e=e))
+        spi_p = None
     limites("sequia")
+
+    st.markdown(f"##### {tx('msm.titulo')}")
+    st.caption(tx("msm.intro"))
+    msm = contraste.monitor(id_zona)
+    msm_p = msm.loc[periodo]
+    comp_msm = contraste.comparar_sequia(spi_p, msm_p["fraccion_sequia"]) if spi_p is not None else None
+    if comp_msm is None:
+        st.info(tx("msm.sin"))
+    else:
+        ult = msm.iloc[-1]
+        if comp_msm["meses_spi"]:
+            conf = (tx("msm.conf.valor", c=comp_msm["confirmados"], n=comp_msm["meses_spi"]),
+                    tx("msm.conf.nota", pct=f"{comp_msm['pct_confirmados']:.0f} %",
+                       desde=mes_texto(f"{comp_msm['desde']:%Y-%m}"), hasta=mes_texto(f"{comp_msm['hasta']:%Y-%m}")))
+        else:
+            conf = ("–", tx("msm.conf.ninguno"))
+        evidencias([
+            (tx("msm.conf.titulo"), *conf, ""),
+            (tx("msm.of.titulo"), f"{comp_msm['meses_oficial']} / {comp_msm['meses']}", tx("msm.of.nota"), ""),
+            (tx("msm.ult.titulo"), tx("msm.ult.valor", n=int(ult[list(contraste.EN_SEQUIA)].sum()),
+                                      total=int(ult["total"])),
+             tx("msm.ult.nota", fecha=mes_largo(msm.index[-1]), d0=int(ult["D0"])), ""),
+        ], "monitor")
+        colores = (E.AMBAR, E.NIVEL["moderado"]["color"], E.NIVEL["severo"]["color"], E.NIVEL["extremo"]["color"],
+                   E.TINTA)
+        fig = go.Figure()
+        for cat, color in zip(contraste.CATEGORIAS, colores):
+            fig.add_bar(x=msm_p.index, y=msm_p[cat], name=tx(f"msm.{cat}"), width=27 * 24 * 3600 * 1000,
+                        marker=dict(color=color, line=dict(width=0)),
+                        hovertemplate=f"%{{y}} · {tx(f'msm.{cat}')}<extra></extra>")
+        fig.update_layout(template=E.PLANTILLA, barmode="stack", bargap=0, height=340,
+                          margin=dict(t=40, b=10, l=10, r=10), xaxis_title=tx("graf.anio"),
+                          yaxis=dict(title=tx("msm.eje"), range=[0, int(msm["total"].iloc[0])]),
+                          xaxis_hoverformat=E.FORMATO_MES, legend=dict(orientation="h", y=1.18, x=0),
+                          hovermode="x unified")
+        st.plotly_chart(fig, width="stretch", config=E.config_grafica(idioma), key="grafica_monitor")
+    st.markdown(E.limites_html(tx("msm.fuente"), tx("msm.limite"), idioma), unsafe_allow_html=True)
 
 # --- Humedad del suelo ---------------------------------------------------------------------
 with t_humedad:
@@ -431,9 +495,14 @@ with t_donde:
                                       else {"color": E.TINTA, "weight": 1, "fill": False, "dashArray": "3 4"}),
             tooltip=folium.GeoJsonTooltip(fields=["nombre"], labels=False),
         ).add_to(mapa)
+        for _, s in contraste.estaciones(id_zona).iterrows():
+            folium.CircleMarker([s["lat"], s["lon"]], radius=5, color=E.TINTA, weight=1.5, fill=True,
+                                fill_color="#FFFFFF", fill_opacity=0.95,
+                                tooltip=tx("donde.estacion", nombre=s["nombre"], municipio=s["municipio"])).add_to(mapa)
         st.iframe(mapa.get_root().render(), height=520)  # HTML hecho por la app (folium), no de usuarios
         seguras = int(celdas_t["color"].isin(SEGURAS).sum())
         st.markdown(E.leyenda_mapa_html(maximo, u_mapa, seguras, len(celdas_t), idioma), unsafe_allow_html=True)
+        st.caption(tx("donde.puntos"))
 
         col_cambio = tx("tabla.cambio", u=u_mapa)
         tabla = pd.DataFrame({

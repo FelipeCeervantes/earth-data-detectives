@@ -158,7 +158,10 @@ TEXTOS: dict[str, dict[str, str]] = {
             '<a href="https://power.larc.nasa.gov/">NASA POWER</a> (NASA Langley Research Center), with data from the '
             '<a href="https://gmao.gsfc.nasa.gov/reanalysis/MERRA-2/">MERRA-2</a> model (NASA GMAO): rainfall and soil '
             'moisture. Municipal boundaries: <a href="https://www.inegi.org.mx/temas/mg/">INEGI Geostatistical '
-            'Framework</a> (2025 Intercensal Survey). Drought: SPI (McKee et al., 1993). Made by the Earth Data '
+            'Framework</a> (2025 Intercensal Survey). Drought: SPI (McKee et al., 1993). Ground and official checks: '
+            '<a href="https://smn.conagua.gob.mx/es/climatologia/informacion-climatologica/informacion-estadistica-'
+            'climatologica">CONAGUA rain gauges (SMN)</a> and <a href="https://smn.conagua.gob.mx/es/climatologia/'
+            'monitor-de-sequia/monitor-de-sequia-en-mexico">Mexico\'s Drought Monitor</a>. Made by the Earth Data '
             "Detectives team for the NASA Space Apps Challenge."
         ),
         "fuente_power": "NASA POWER, from the MERRA-2 model (NASA GMAO), monthly data since 1981. "
@@ -205,6 +208,41 @@ TEXTOS: dict[str, dict[str, str]] = {
                           "mean a harvest was lost.",
         "limites.donde": "Each cell averages about 55 × 65 km: it does not tell one plot from another. Cells on the "
                          "edges also cover part of neighbouring municipalities.",
+        # Contraste con CONAGUA
+        "est.titulo": "Ground check: CONAGUA rain gauges",
+        "est.intro": "We compare NASA POWER with the rain gauges of Mexico's National Weather Service (SMN) in this "
+                     "zone. A gauge measures one point and POWER averages about 50 km, so what matters is that they "
+                     "rise and fall together, not that the totals are identical.",
+        "est.n.titulo": "Stations", "est.n.nota": "SMN rain gauges in this zone",
+        "est.r.titulo": "Year-to-year agreement", "est.r.nota": "Correlation of annual totals ({n} complete years).",
+        "est.r.ayuda": "1 means they rise and fall exactly together; 0 means they have nothing to do with each other.",
+        "est.dif.titulo": "Difference in the average", "est.dif.nota": "Rain in POWER compared with the gauges.",
+        "est.graf.power": "NASA POWER", "est.graf.est": "Average of the gauges (CONAGUA)", "est.graf.eje": "mm/year",
+        "est.sin": "There are not enough complete years at the gauges to compare in this period.",
+        "est.fuente": "CONAGUA, National Weather Service (SMN): monthly statistics of {n} climatological stations.",
+        "est.limite": "Gauge records have gaps: we only compare years in which the gauges and POWER both have the "
+                      "12 months.",
+        "msm.titulo": "Official check: Mexico's Drought Monitor (CONAGUA)",
+        "msm.intro": "Every month (every two weeks since 2014), CONAGUA's experts rate each municipality from D0 "
+                     "(abnormally dry) to D4 (exceptional drought), combining several indices and field reports. We "
+                     "count a month as official drought when at least half of the zone's municipalities are in D1 "
+                     "or worse.",
+        "msm.conf.titulo": "Our drought months confirmed", "msm.conf.valor": "{c} of {n}",
+        "msm.conf.nota": "{pct} were also official drought ({desde} – {hasta}).",
+        "msm.conf.ninguno": "Our SPI found no drought months to compare in this period.",
+        "msm.of.titulo": "Months in official drought",
+        "msm.of.nota": "The Monitor marks more months: it also counts long droughts and their impacts.",
+        "msm.ult.titulo": "Latest official report", "msm.ult.valor": "{n} of {total} in drought",
+        "msm.ult.nota": "{fecha}. Abnormally dry (D0): {d0}.",
+        "msm.eje": "Municipalities",
+        "msm.D0": "D0 Abnormally dry", "msm.D1": "D1 Moderate drought", "msm.D2": "D2 Severe drought",
+        "msm.D3": "D3 Extreme drought", "msm.D4": "D4 Exceptional drought",
+        "msm.sin": "The Drought Monitor starts in 2003: choose a period that reaches 2003 or later to compare.",
+        "msm.fuente": "CONAGUA, Mexico's Drought Monitor (MSM): category of each municipality since 2003.",
+        "msm.limite": "The Monitor is an expert judgement that mixes several indices; ours only looks at rainfall, so "
+                      "they should match often, not always.",
+        "donde.estacion": "Rain gauge {nombre} ({municipio}) · CONAGUA SMN",
+        "donde.puntos": "Dots: the CONAGUA rain gauges we use to check POWER.",
     },
     "es": {
         "pagina.titulo": "Detectives de Datos de la Tierra · Los Altos",
@@ -327,7 +365,11 @@ TEXTOS: dict[str, dict[str, str]] = {
             '<a href="https://power.larc.nasa.gov/">NASA POWER</a> (NASA Langley Research Center), con datos del modelo '
             '<a href="https://gmao.gsfc.nasa.gov/reanalysis/MERRA-2/">MERRA-2</a> (NASA GMAO): lluvia y humedad del '
             'suelo. Límites municipales: <a href="https://www.inegi.org.mx/temas/mg/">Marco Geoestadístico de INEGI</a> '
-            "(Encuesta Intercensal 2025). Sequía: SPI (McKee y colegas, 1993). Hecho por el equipo Detectives de Datos "
+            "(Encuesta Intercensal 2025). Sequía: SPI (McKee y colegas, 1993). Comprobaciones en tierra y oficial: "
+            '<a href="https://smn.conagua.gob.mx/es/climatologia/informacion-climatologica/informacion-estadistica-'
+            'climatologica">pluviómetros de CONAGUA (SMN)</a> y <a href="https://smn.conagua.gob.mx/es/climatologia/'
+            'monitor-de-sequia/monitor-de-sequia-en-mexico">Monitor de Sequía de México</a>. Hecho por el equipo '
+            "Detectives de Datos "
             "de la Tierra para el NASA Space Apps Challenge."
         ),
         "fuente_power": "NASA POWER, a partir del modelo MERRA-2 (NASA GMAO), datos mensuales desde 1981. "
@@ -374,6 +416,43 @@ TEXTOS: dict[str, dict[str, str]] = {
                           "decir que se perdió una cosecha.",
         "limites.donde": "Cada celda promedia unos 55 × 65 km: no distingue una parcela de otra. Las celdas de las "
                          "orillas también cubren parte de municipios vecinos.",
+        "est.titulo": "Comprobación en tierra: pluviómetros de CONAGUA",
+        "est.intro": "Comparamos NASA POWER con los pluviómetros del Servicio Meteorológico Nacional (SMN) en esta "
+                     "zona. Un pluviómetro mide un punto y POWER promedia unos 50 km: lo que importa es que suban y "
+                     "bajen juntos, no que los totales sean idénticos.",
+        "est.n.titulo": "Estaciones", "est.n.nota": "pluviómetros del SMN en esta zona",
+        "est.r.titulo": "Coincidencia año con año", "est.r.nota": "Correlación de los totales anuales ({n} años "
+                                                               "completos).",
+        "est.r.ayuda": "1 quiere decir que suben y bajan exactamente juntos; 0, que no tienen nada que ver.",
+        "est.dif.titulo": "Diferencia en el promedio", "est.dif.nota": "Lluvia de POWER frente a los pluviómetros.",
+        "est.graf.power": "NASA POWER", "est.graf.est": "Promedio de los pluviómetros (CONAGUA)",
+        "est.graf.eje": "mm/año",
+        "est.sin": "No hay suficientes años completos en los pluviómetros para comparar en este periodo.",
+        "est.fuente": "CONAGUA, Servicio Meteorológico Nacional (SMN): estadística mensual de {n} estaciones "
+                      "climatológicas.",
+        "est.limite": "Los registros de los pluviómetros tienen huecos: solo comparamos los años en que los "
+                      "pluviómetros y POWER tienen los 12 meses.",
+        "msm.titulo": "Comprobación oficial: Monitor de Sequía de México (CONAGUA)",
+        "msm.intro": "Cada mes (cada quincena desde 2014), los expertos de CONAGUA califican cada municipio de D0 "
+                     "(anormalmente seco) a D4 (sequía excepcional), combinando varios índices y reportes de campo. "
+                     "Contamos un mes como sequía oficial cuando al menos la mitad de los municipios de la zona está "
+                     "en D1 o peor.",
+        "msm.conf.titulo": "Nuestros meses de sequía confirmados", "msm.conf.valor": "{c} de {n}",
+        "msm.conf.nota": "{pct} también fueron sequía oficial ({desde} – {hasta}).",
+        "msm.conf.ninguno": "Nuestro SPI no encontró meses de sequía para comparar en este periodo.",
+        "msm.of.titulo": "Meses en sequía oficial",
+        "msm.of.nota": "El Monitor marca más meses: también cuenta las sequías largas y sus impactos.",
+        "msm.ult.titulo": "Último reporte oficial", "msm.ult.valor": "{n} de {total} en sequía",
+        "msm.ult.nota": "{fecha}. Anormalmente secos (D0): {d0}.",
+        "msm.eje": "Municipios",
+        "msm.D0": "D0 Anormalmente seco", "msm.D1": "D1 Sequía moderada", "msm.D2": "D2 Sequía severa",
+        "msm.D3": "D3 Sequía extrema", "msm.D4": "D4 Sequía excepcional",
+        "msm.sin": "El Monitor de Sequía empieza en 2003: elige un periodo que llegue a 2003 o después para comparar.",
+        "msm.fuente": "CONAGUA, Monitor de Sequía de México (MSM): categoría de cada municipio desde 2003.",
+        "msm.limite": "El Monitor es un juicio de expertos que mezcla varios índices; el nuestro solo mira la lluvia, "
+                      "así que deben coincidir seguido, no siempre.",
+        "donde.estacion": "Pluviómetro {nombre} ({municipio}) · SMN de CONAGUA",
+        "donde.puntos": "Puntos: los pluviómetros de CONAGUA con los que comprobamos POWER.",
     },
 }
 

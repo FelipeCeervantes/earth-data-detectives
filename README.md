@@ -25,11 +25,12 @@ src/catalogo.py     variables: rainfall and soil moisture (name, definition, uni
 src/datos.py        download, cache and offline backup of the series
 src/analisis.py     trends and statistical tests
 src/indices.py      meteorological drought (SPI), soil water stress and rainfall totals
+src/contraste.py    checks against CONAGUA: rain gauges (SMN) and Mexico's Drought Monitor
 src/explicar.py     plain-language summary (templates and Gemini)
-src/estilo.py       visual identity ("field case file")
+src/estilo.py       visual identity ("sky over dry land")
 src/textos.py       interface texts
 data/region/        Los Altos boundaries (INEGI); data/ is otherwise a local cache
-demos/              stored series so the app works offline
+demos/              stored series so the app works offline, plus the CONAGUA checks
 docs/               solution page, submission texts, brand guide, deployment guide and screenshots
 tests/              tests (pytest)
 ```

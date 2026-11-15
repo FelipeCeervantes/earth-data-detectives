@@ -10,3 +10,4 @@ folium>=0.17
 requests>=2.32
 pytest>=8.3
 # Only to rebuild data/region from INEGI (scripts/preparar_region.py): pip install pyshp shapely
+# Only to refresh the CONAGUA checks in demos/ (scripts/descargar_conagua.py): pip install openpyxl

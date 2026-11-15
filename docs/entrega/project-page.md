@@ -33,7 +33,8 @@ Los Altos de Jalisco, a highland region of 20 municipalities in western Mexico, 
 2. **Normal:** each month is compared with the same month in 1991–2020 (the World Meteorological Organization standard normal), which removes the seasonal cycle.
 3. **Meteorological drought:** the Standardized Precipitation Index (SPI-3 and SPI-6, McKee et al., 1993). **Soil water stress:** the standardized anomaly of soil moisture for each month. It does not directly measure crop stress.
 4. **Trends:** linear regression with a 95% confidence interval (autocorrelation-robust errors) and the Mann-Kendall test with Sen's slope, also in its seasonal form and with the Hamed-Rao correction. A trend is called "clear" only when both tests agree; otherwise the app says how many more years of data would be needed to be sure.
-5. **Summary:** Python builds a structured summary of the results and Gemini explains it in plain words, under strict rules: no new numbers, no causes, no crop advice.
+5. **Checks on the ground:** Is the NASA data right on the ground? The app checks it against two Mexican sources from CONAGUA: the monthly records of 20 rain gauges of the National Weather Service (SMN) and Mexico's Drought Monitor, which rates each municipality from D0 to D4.
+6. **Summary:** Python builds a structured summary of the results and Gemini explains it in plain words, under strict rules: no new numbers, no causes, no crop advice.
 
 ### What we found (2001–2024)
 - **Rainfall:** about 652 mm per year in the whole region, with no clear trend yet: −3.04 mm per month per decade (95% CI −8.2 to 2.13). About 10 more years of data would tell us for sure.
@@ -41,6 +42,7 @@ Los Altos de Jalisco, a highland region of 20 municipalities in western Mexico, 
 - **Soil moisture (root zone):** no clear overall trend, but the seasonal test, which compares each month with the same month in other years, detects a decline (p = 0.016).
 - **Soil water stress:** 25 of 288 months, 10 of them in the last 5 years.
 - **Where:** the signal is not the same everywhere. In Altos Sur the seasonal test detects declining soil moisture (p = 0.001), while in Altos Norte it does not (p = 0.051).
+- **Checks:** year to year, POWER rainfall rises and falls with the CONAGUA rain gauges (correlation 0.96 over 23 complete years), about 6% lower on average. Of the 34 months our SPI-6 marked as drought, 24 (71%) were also official drought in Mexico's Drought Monitor.
 - These data show changes, not their causes.
 
 ### Benefits
@@ -66,7 +68,8 @@ Python 3.12, Streamlit, pandas, NumPy, SciPy, statsmodels, pymannkendall, Plotly
 - NASA Prediction Of Worldwide Energy Resources (POWER) Project, NASA Langley Research Center. https://power.larc.nasa.gov/
 - Gelaro, R., et al. (2017). The Modern-Era Retrospective Analysis for Research and Applications, Version 2 (MERRA-2). *Journal of Climate*, 30(14), 5419–5454.
 - INEGI, Marco Geoestadístico (municipal boundaries of Jalisco). https://www.inegi.org.mx/temas/mg/
-- Servicio Meteorológico Nacional (CONAGUA), Monitor de Sequía en México (for comparison). https://smn.conagua.gob.mx/es/climatologia/monitor-de-sequia/monitor-de-sequia-en-mexico
+- Servicio Meteorológico Nacional (CONAGUA), Monitor de Sequía en México: municipal drought categories since 2003 (official check). https://smn.conagua.gob.mx/es/climatologia/monitor-de-sequia/monitor-de-sequia-en-mexico
+- Servicio Meteorológico Nacional (CONAGUA), Información Estadística Climatológica: monthly rainfall of 20 stations in Los Altos (ground check). https://smn.conagua.gob.mx/es/climatologia/informacion-climatologica/informacion-estadistica-climatologica
 - Map tiles © OpenStreetMap contributors. https://www.openstreetmap.org/copyright
 
 **Methods**
