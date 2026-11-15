@@ -10,6 +10,7 @@ Capas de tokens: primitivos (hex) → semánticos (para qué se usan) → compon
 from __future__ import annotations
 
 import html
+import json
 from string import Template
 
 import plotly.graph_objects as go
@@ -45,9 +46,11 @@ TINTA_SUAVE = NIEBLA
 MAS_AGUA = AGUA
 MENOS_AGUA = SECO
 AMBAR = SECO
-VIDRIO = "rgba(255,255,255,0.075)"
-VIDRIO_FUERTE = "rgba(255,255,255,0.12)"
+# Vidrio "liquid glass": casi sin relleno (el desenfoque hace el trabajo), con luz en el borde de arriba
+VIDRIO = "rgba(255,255,255,0.04)"
+VIDRIO_FUERTE = "rgba(255,255,255,0.08)"
 VIDRIO_BORDE = "rgba(255,255,255,0.16)"
+VIDRIO_SOLIDO = "rgba(11,43,82,0.94)"  # respaldo si el navegador no sabe desenfocar (backdrop-filter)
 PILA_TEXTO = f"'{FUENTE_TEXTO}', 'Segoe UI', Arial, Helvetica, sans-serif"
 PILA_TITULOS = f"'{FUENTE_TITULOS}', 'Segoe UI', Arial, Helvetica, sans-serif"
 PILA_NUMEROS = PILA_TITULOS
@@ -102,8 +105,24 @@ _CSS = Template("""
 :root {
   --dd-nube: $nube; --dd-niebla: $niebla; --dd-tenue: $tenue; --dd-agua: $agua; --dd-seco: $seco;
   --dd-vidrio: $vidrio; --dd-vidrio-fuerte: $vidrio_fuerte; --dd-vidrio-borde: $vidrio_borde;
-  --dd-radio: 22px;
-  --dd-sombra: 0 24px 48px -28px rgba(0,8,20,0.75), inset 0 1px 0 rgba(255,255,255,0.16);
+  --dd-radio: 26px;
+  /* Liquid glass: relleno casi transparente con un velo de luz arriba, desenfoque fuerte, borde que va de claro
+     (arriba) a tenue (abajo), brillo fino en el canto de arriba y sombra difusa */
+  --dd-vidrio-relleno: radial-gradient(120% 90% at 0% 0%, rgba(255,255,255,0.12), rgba(255,255,255,0) 55%),
+    linear-gradient(165deg, rgba(255,255,255,0.085) 0%, rgba(190,228,255,0.04) 42%, rgba(92,200,255,0.025) 100%);
+  --dd-vidrio-filtro: blur(26px) saturate(180%) brightness(0.74);
+  --dd-vidrio-canto: rgba(255,255,255,0.40) rgba(255,255,255,0.15) rgba(255,255,255,0.07) rgba(255,255,255,0.15);
+  --dd-sombra: 0 32px 66px -38px rgba(0,12,32,0.60), 0 10px 24px -18px rgba(0,12,32,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(92,200,255,0.14), inset 0 18px 26px -22px rgba(255,255,255,0.22);
+  /* Botones: cápsulas de vidrio (sin desenfoque propio, son muchas): luz arriba, un tinte azul abajo */
+  --dd-capsula: linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.06) 55%, rgba(173,224,255,0.10) 100%),
+    rgba(10,40,78,0.34);
+  --dd-capsula-encima: linear-gradient(180deg, rgba(255,255,255,0.30) 0%, rgba(255,255,255,0.10) 55%, rgba(173,224,255,0.16) 100%),
+    rgba(10,40,78,0.34);
+  --dd-capsula-elegida: linear-gradient(180deg, #FFFFFF 0%, #E8F6FF 55%, #CDEBFF 100%);
+  --dd-capsula-sombra: inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(92,200,255,0.25),
+    0 8px 18px -12px rgba(0,12,32,0.65);
+  --dd-capsula-halo: 0 0 0 4px rgba(92,200,255,0.14), 0 12px 24px -14px rgba(0,12,32,0.7);
   --dd-texto: $pila_texto; --dd-titulos: $pila_titulos;
 }
 
@@ -115,6 +134,9 @@ html { background:
   background-color: $hondo; }
 body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-testid="stHeader"],
 [data-testid="stBottomBlockContainer"] { background: transparent !important; }
+/* Streamlit atenúa (opacidad 0.33, tras medio segundo) lo que está "viejo" mientras recalcula: los paneles se veían
+   transparentes a ratos después de un clic. Aquí nunca se atenúan; el cristal transparente es una opción (CSS_CRISTAL). */
+[data-stale="true"] { opacity: 1 !important; transition: none !important; }
 
 /* Nubes que pasan despacio (solo si la persona no pidió menos movimiento) */
 .stApp::before { content: ""; position: fixed; inset: -12% -25% auto -25%; height: 70vh; z-index: -2;
@@ -132,23 +154,29 @@ body, .stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"], [data-
 .st-key-fondo3d iframe { position: fixed !important; inset: 0; width: 100vw !important; height: 100vh !important;
   border: 0; pointer-events: none; }
 
+/* El iframe que trae la gota (GOTA_HTML) no ocupa lugar ni se ve */
+.st-key-gota { position: fixed !important; left: 0; top: 0; width: 1px; height: 1px; overflow: hidden; opacity: 0;
+  pointer-events: none; }
+
 /* Sin barra de Streamlit encima del contenido (en el celular tapaba las tarjetas) */
 [data-testid="stToolbar"], [data-testid="stSidebarCollapsedControl"], [data-testid="stDecoration"] { display: none !important; }
 [data-testid="stHeader"] { height: 0 !important; pointer-events: none; }
 [data-testid="stMainBlockContainer"] { max-width: 1180px; padding-top: 1.6rem !important; padding-bottom: 3rem !important; }
 
 /* Vidrio esmerilado */
-.dd-significa, .dd-tarjeta, .dd-resumen, .dd-veredicto, [class*="st-key-evidencia"], .st-key-controles,
-[data-testid="stPlotlyChart"], [data-testid="stDeckGlJsonChart"], [data-testid="stExpander"] details {
-  background: var(--dd-vidrio) !important;
-  -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%);
-  border: 1px solid var(--dd-vidrio-borde) !important; border-radius: var(--dd-radio) !important;
+.dd-significa, .dd-tarjeta, .dd-resumen, .dd-veredicto, .dd-limites, .dd-fuentes, [class*="st-key-evidencia"],
+.st-key-controles, [data-testid="stPlotlyChart"], [data-testid="stDeckGlJsonChart"], [data-testid="stExpander"] details {
+  background: var(--dd-vidrio-relleno) !important;
+  -webkit-backdrop-filter: var(--dd-vidrio-filtro); backdrop-filter: var(--dd-vidrio-filtro);
+  border: 1px solid !important; border-color: var(--dd-vidrio-canto) !important;
+  border-radius: var(--dd-radio) !important;
   box-shadow: var(--dd-sombra);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .dd-significa, .dd-tarjeta, .dd-resumen, .dd-veredicto, [class*="st-key-evidencia"], .st-key-controles,
-  [data-testid="stPlotlyChart"], [data-testid="stDeckGlJsonChart"], [data-testid="stExpander"] details {
-    background: rgba(11,43,82,0.94) !important; }
+  .dd-significa, .dd-tarjeta, .dd-resumen, .dd-veredicto, .dd-limites, .dd-fuentes, [class*="st-key-evidencia"],
+  .st-key-controles, [data-testid="stPlotlyChart"], [data-testid="stDeckGlJsonChart"], [data-testid="stExpander"] details {
+    background: $vidrio_solido !important; }
+  .st-key-vista div[role="radiogroup"], p.dd-buscado { background: $vidrio_solido !important; }
 }
 [data-testid="stPlotlyChart"] { padding: .9rem .6rem .4rem; }
 [data-testid="stDeckGlJsonChart"] { overflow: hidden; padding: 0; }
@@ -181,23 +209,72 @@ p.dd-hero__nota { font-size: 1.05rem !important; color: var(--dd-niebla); max-wi
 
 /* Botones de opciones (zona, sección, capa, índice): píldoras de vidrio */
 div[role="radiogroup"]:has(button[role="radio"]) { flex-wrap: wrap; gap: .4rem; }
-button[role="radio"] { border-radius: 999px !important; margin: 0 !important;
-  border: 1px solid var(--dd-vidrio-borde) !important; background: rgba(255,255,255,0.06) !important;
-  color: var(--dd-niebla) !important; font-family: var(--dd-titulos); font-weight: 500; padding: .3rem .95rem !important;
-  transition: background .15s ease, color .15s ease; }
-button[role="radio"]:hover { background: rgba(255,255,255,0.14) !important; color: var(--dd-nube) !important; }
-button[role="radio"][aria-checked="true"] { background: var(--dd-nube) !important; color: $hondo !important;
-  border-color: var(--dd-nube) !important; box-shadow: 0 6px 18px -8px rgba(92,200,255,0.8); }
+button[role="radio"], [data-testid="stDownloadButton"] button, [data-testid="stButton"] button {
+  border-radius: 999px !important; margin: 0 !important;
+  border: 1px solid !important; border-color: var(--dd-vidrio-canto) !important;
+  background: var(--dd-capsula) !important; box-shadow: var(--dd-capsula-sombra);
+  color: var(--dd-nube) !important; font-family: var(--dd-titulos); font-weight: 500; padding: .32rem 1rem !important;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease; }
+button[role="radio"]:hover, [data-testid="stDownloadButton"] button:hover, [data-testid="stButton"] button:hover {
+  background: var(--dd-capsula-encima) !important; color: var(--dd-nube) !important;
+  border-color: rgba(255,255,255,0.6) rgba(255,255,255,0.28) rgba(255,255,255,0.14) rgba(255,255,255,0.28) !important;
+  box-shadow: var(--dd-capsula-sombra), var(--dd-capsula-halo); }
+button[role="radio"][aria-checked="true"] { background: var(--dd-capsula-elegida) !important; color: $hondo !important;
+  border-color: rgba(255,255,255,0.95) rgba(255,255,255,0.7) rgba(173,224,255,0.8) rgba(255,255,255,0.7) !important;
+  box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -2px 0 rgba(92,200,255,0.35), 0 10px 24px -12px rgba(92,200,255,0.75); }
 button[role="radio"][aria-checked="true"] * { color: $hondo !important; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  button[role="radio"]:hover, [data-testid="stDownloadButton"] button:hover, [data-testid="stButton"] button:hover {
+    transform: translateY(-1px); }
+  button[role="radio"]:active, [data-testid="stDownloadButton"] button:active, [data-testid="stButton"] button:active {
+    transform: translateY(0) scale(.98); }
+}
 
 /* Navegación principal: tres secciones en una barra de vidrio que se queda arriba al bajar */
 .st-key-vista { position: sticky; top: .6rem; z-index: 20; margin: .4rem 0 .2rem; }
-.st-key-vista div[role="radiogroup"] { background: rgba(6,26,51,0.6); padding: .4rem; border-radius: 999px;
-  -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%);
-  border: 1px solid var(--dd-vidrio-borde); box-shadow: var(--dd-sombra); flex-wrap: nowrap; width: 100%; }
+.st-key-vista div[role="radiogroup"] { padding: .4rem; border-radius: 999px;
+  /* Se queda arriba y el contenido pasa por debajo: un poco de tinte azul para que sus letras siempre se lean */
+  background: linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02)), rgba(6,26,51,0.30);
+  -webkit-backdrop-filter: blur(24px) saturate(165%) brightness(0.82);
+  backdrop-filter: blur(24px) saturate(165%) brightness(0.82);
+  border: 1px solid; border-color: var(--dd-vidrio-canto); box-shadow: var(--dd-sombra); flex-wrap: nowrap;
+  width: 100%; }
 .st-key-vista button[role="radio"] { flex: 1 1 0; border: 0 !important; background: transparent !important;
+  box-shadow: none;
   font-size: 1.02rem; padding: .55rem .8rem !important; min-height: 2.9rem; }
-.st-key-vista button[role="radio"][aria-checked="true"] { background: var(--dd-nube) !important; }
+.st-key-vista button[role="radio"]:hover { background: rgba(255,255,255,0.12) !important; box-shadow: none; }
+.st-key-vista button[role="radio"][aria-checked="true"] { background: var(--dd-capsula-elegida) !important;
+  box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -2px 0 rgba(92,200,255,0.35), 0 10px 24px -12px rgba(92,200,255,0.75); }
+
+/* La gota: en los grupos de botones de una sola línea, el botón elegido se desliza de uno a otro como una gota de
+   agua (el borde de adelante llega primero, el de atrás lo alcanza y la gota se aplana un poco al moverse).
+   La mueve GOTA_JS (abajo); sin JavaScript, cada botón conserva su propio estilo. */
+[data-gota] { position: relative; isolation: isolate; }
+[data-gota]::before { content: ""; position: absolute; z-index: 0; pointer-events: none; border-radius: 999px;
+  left: var(--gota-l, 0px); right: var(--gota-r, 100%); top: var(--gota-t, 0px); bottom: var(--gota-b, 0px);
+  background: var(--dd-capsula-elegida);
+  box-shadow: inset 0 1px 0 #FFFFFF, inset 0 -2px 0 rgba(92,200,255,0.35), 0 10px 24px -12px rgba(92,200,255,0.75);
+  transition: left var(--gota-tl, .45s) var(--gota-el, ease), right var(--gota-tr, .45s) var(--gota-er, ease),
+    top .5s ease, bottom .5s ease; }
+[data-gota][data-gota-quieto]::before { transition: none; }
+[data-gota][data-gota-mov="a"]::before { animation: dd-gota-a 1.1s cubic-bezier(.45,0,.35,1); }
+[data-gota][data-gota-mov="b"]::before { animation: dd-gota-b 1.1s cubic-bezier(.45,0,.35,1); }
+@keyframes dd-gota-a { 0% { transform: scale(1,1); } 28% { transform: scale(1,.74); } 58% { transform: scale(1,.9); }
+  76% { transform: scale(1,1.07); } 90% { transform: scale(1,.98); } 100% { transform: scale(1,1); } }
+@keyframes dd-gota-b { 0% { transform: scale(1,1); } 28% { transform: scale(1,.74); } 58% { transform: scale(1,.9); }
+  76% { transform: scale(1,1.07); } 90% { transform: scale(1,.98); } 100% { transform: scale(1,1); } }
+[data-gota] button[role="radio"] { position: relative; z-index: 1;
+  transition: background .25s ease, border-color .25s ease, box-shadow .25s ease, transform .18s ease, color .45s ease .3s; }
+[data-gota] button[role="radio"][aria-checked="true"] { background: var(--dd-capsula) !important;
+  border-color: var(--dd-vidrio-canto) !important; box-shadow: var(--dd-capsula-sombra) !important; }
+[data-gota] button[role="radio"], [data-gota] button[role="radio"] * { color: var(--dd-nube) !important; }
+[data-gota] button[role="radio"] * { transition: color .45s ease .3s; }
+[data-gota] button[role="radio"][data-gota-activo] { background: transparent !important; border-color: transparent !important;
+  box-shadow: none !important; }
+[data-gota] button[role="radio"][data-gota-activo], [data-gota] button[role="radio"][data-gota-activo] * { color: $hondo !important; }
+.st-key-vista [data-gota] button[role="radio"]:not([data-gota-activo]) { background: transparent !important;
+  border-color: transparent !important; box-shadow: none !important; }
+@media (prefers-reduced-motion: reduce) { [data-gota]::before { transition: none; animation: none !important; } }
 
 /* Títulos de sección: preguntas sencillas con una línea que se desvanece */
 .dd-seccion { display: flex; align-items: center; gap: .9rem; margin: 1.8rem 0 .5rem; }
@@ -245,7 +322,8 @@ p.dd-etiqueta { font-family: var(--dd-titulos); font-size: .72rem !important; fo
   text-transform: uppercase; color: var(--dd-agua); margin: 0 0 .4rem !important; }
 .dd-significa p.dd-significa__texto { font-size: 1.04rem !important; line-height: 1.6; margin: 0 !important; color: var(--dd-nube); }
 .dd-significa p.dd-significa__no { font-size: .98rem !important; margin: .6rem 0 0 !important; color: var(--dd-niebla); }
-.dd-limites { border-top: 1px solid rgba(255,255,255,0.12); margin-top: 1.6rem; padding-top: .8rem; }
+/* Las notas de fuente también van en vidrio: sueltas sobre el relieve del fondo no se leían */
+.dd-limites { margin-top: 1.6rem; padding: .9rem 1.25rem .8rem; }
 .dd-limites p.dd-etiqueta { color: var(--dd-niebla); }
 .dd-limites p { font-size: .92rem !important; color: var(--dd-niebla); margin: 0 0 .25rem !important; line-height: 1.5; }
 
@@ -272,7 +350,8 @@ p.dd-etiqueta { font-family: var(--dd-titulos); font-size: .72rem !important; fo
 .dd-resumen p.dd-resumen__origen { font-size: .9rem !important; color: var(--dd-niebla); margin-top: .7rem !important; }
 
 /* Municipio buscado en el mapa */
-p.dd-buscado { background: var(--dd-vidrio-fuerte); border: 1px solid var(--dd-vidrio-borde); border-left: 4px solid #FFD48A;
+p.dd-buscado { background: var(--dd-vidrio-relleno); -webkit-backdrop-filter: var(--dd-vidrio-filtro);
+  backdrop-filter: var(--dd-vidrio-filtro); border: 1px solid var(--dd-vidrio-borde); border-left: 4px solid #FFD48A;
   border-radius: 14px; padding: .7rem 1rem; margin: .7rem 0 .2rem !important; font-size: 1.02rem !important;
   color: var(--dd-nube); box-shadow: 0 0 24px -10px #FFD48A; }
 
@@ -293,8 +372,9 @@ p.dd-buscado { background: var(--dd-vidrio-fuerte); border: 1px solid var(--dd-v
 
 /* Globo 3D (src/globo.py): una ventana de vidrio grande, más ancha que el texto (hasta 1400 px) y casi del alto
    de la pantalla; en el celular es más bajo */
-.st-key-globo { border-radius: var(--dd-radio); overflow: hidden; border: 1px solid var(--dd-vidrio-borde);
-  background: radial-gradient(120% 90% at 50% 40%, rgba(17,67,122,0.55), rgba(6,26,51,0.82));
+.st-key-globo { border-radius: var(--dd-radio); overflow: hidden; border: 1px solid;
+  border-color: var(--dd-vidrio-canto);
+  background: radial-gradient(120% 90% at 50% 40%, rgba(17,67,122,0.38), rgba(6,26,51,0.66));
   box-shadow: var(--dd-sombra); width: min(calc(100vw - 2rem), 1400px) !important; max-width: none !important;
   position: relative; left: 50%; transform: translateX(-50%); }
 /* El contenedor de Streamlit y el iframe miden lo mismo (si no, se corta la barra de botones de abajo) */
@@ -307,17 +387,23 @@ p.dd-buscado { background: var(--dd-vidrio-fuerte); border: 1px solid var(--dd-v
   .dd-tarjeta, [class*="st-key-evidencia"], .dd-significa, .dd-resumen {
     transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
   .dd-tarjeta:hover, [class*="st-key-evidencia"]:hover, .dd-significa:hover, .dd-resumen:hover {
-    transform: translateY(-3px); border-color: rgba(255,255,255,0.3) !important;
-    box-shadow: 0 22px 44px -22px rgba(0,0,0,0.75), 0 0 0 1px rgba(92,200,255,0.12); }
+    transform: translateY(-3px);
+    border-color: rgba(255,255,255,0.55) rgba(255,255,255,0.24) rgba(255,255,255,0.12) rgba(255,255,255,0.24) !important;
+    box-shadow: 0 40px 80px -40px rgba(0,8,20,0.7), 0 0 0 1px rgba(92,200,255,0.10),
+      inset 0 1px 0 rgba(255,255,255,0.5), inset 0 18px 26px -20px rgba(255,255,255,0.28); }
 }
 
 /* Botones de descarga y expansores */
-[data-testid="stDownloadButton"] button { border-radius: 999px !important; background: var(--dd-vidrio-fuerte) !important;
-  border: 1px solid var(--dd-vidrio-borde) !important; }
 [data-testid="stExpander"] details summary p { font-family: var(--dd-titulos); }
+[data-testid="stExpander"] details summary { border-radius: var(--dd-radio); transition: background .18s ease; }
+[data-testid="stExpander"] details summary:hover { background: rgba(255,255,255,0.07); }
+/* Periodo: perillas de vidrio blanco con halo azul */
+[data-testid="stSlider"] [role="slider"] { background: var(--dd-capsula-elegida) !important;
+  border: 1px solid rgba(255,255,255,0.95) !important;
+  box-shadow: 0 0 0 4px rgba(92,200,255,0.18), 0 6px 14px -6px rgba(0,12,32,0.7) !important; }
 
 /* Pie: fuentes */
-.dd-fuentes { border-top: 1px solid rgba(255,255,255,0.12); margin-top: 2rem; padding-top: 1rem;
+.dd-fuentes { margin-top: 2rem; padding: 1rem 1.25rem .9rem;
   font-size: .92rem; color: var(--dd-niebla); line-height: 1.6; }
 .dd-fuentes__titulo { font-family: var(--dd-titulos); font-size: .72rem; font-weight: 600; letter-spacing: .12em;
   text-transform: uppercase; color: var(--dd-nube); margin: 0 0 .35rem; }
@@ -331,9 +417,12 @@ p.dd-buscado { background: var(--dd-vidrio-fuerte); border: 1px solid var(--dd-v
   [data-testid="stMainBlockContainer"] { padding-left: 1rem !important; padding-right: 1rem !important; }
   .st-key-controles { padding: .85rem .9rem .4rem !important; }
   .st-key-vista { top: .35rem; }
-  .st-key-vista button[role="radio"] { font-size: .86rem; padding: .45rem .35rem !important; line-height: 1.15; }
+  /* Cuatro secciones en 375 px: cada una ocupa lo que mide su nombre y las palabras no se parten a la mitad */
+  .st-key-vista div[role="radiogroup"] { padding: .3rem; gap: .15rem; flex-wrap: wrap; border-radius: 26px; }
+  .st-key-vista button[role="radio"] { font-size: .8rem; padding: .4rem .3rem !important; line-height: 1.15;
+    flex: 1 1 auto; min-width: 0; }
   .st-key-vista button[role="radio"] * { white-space: normal !important; overflow: visible !important;
-    text-overflow: clip !important; }
+    text-overflow: clip !important; word-break: normal !important; overflow-wrap: normal !important; }
   .st-key-vista [data-testid="stIconMaterial"] { display: none; }
   .dd-sello { white-space: normal; font-size: .92rem; }
   [data-testid="stPlotlyChart"] { padding: .6rem .2rem .2rem; }
@@ -344,7 +433,7 @@ p.dd-buscado { background: var(--dd-vidrio-fuerte); border: 1px solid var(--dd-v
 
 CSS = "<style>" + _CSS.substitute(
     nube=NUBE, niebla=NIEBLA, tenue=TENUE, agua=AGUA, seco=SECO, neutro=NEUTRO, alto=CIELO_ALTO, hondo=CIELO_HONDO,
-    cielo=CIELO, horizonte=HORIZONTE, vidrio=VIDRIO, vidrio_fuerte=VIDRIO_FUERTE, vidrio_borde=VIDRIO_BORDE,
+    cielo=CIELO, horizonte=HORIZONTE, vidrio=VIDRIO, vidrio_fuerte=VIDRIO_FUERTE, vidrio_borde=VIDRIO_BORDE, vidrio_solido=VIDRIO_SOLIDO,
     pila_texto=PILA_TEXTO, pila_titulos=PILA_TITULOS, sequia_baja=SEQUIA_BAJA, sequia_alta=SEQUIA_ALTA,
     alto_celular=ALTO_GLOBO_CELULAR,
 ) + "</style>"
@@ -501,3 +590,141 @@ def leyenda_sequia_html(minimo: int, maximo: int, idioma: str = "es") -> str:
             f'<span class="dd-leyenda__barra dd-leyenda__barra--sequia" aria-hidden="true"></span>'
             f'<span>{T.t("leyenda.sequia_mas", idioma, n=maximo)}</span></div>'
             f'<div class="dd-leyenda"><span>{T.t("leyenda.sequia_nota", idioma)}</span></div>')
+
+
+# --- La gota que se desliza (los botones en una sola línea) -----------------------------------------------
+# Corre en la página de la app: un iframe vacío (GOTA_HTML) lo agrega una sola vez a parent.document. Marca cada grupo
+# de botones de una línea con data-gota y mueve la gota (el ::before del grupo, ver la CSS) al botón elegido: al
+# hacer clic se mueve en ese momento, sin esperar la respuesta del servidor. El borde de adelante va más rápido que
+# el de atrás, así la gota se estira y luego se junta. Con "reducir movimiento", salta sin animación.
+GOTA_JS = r"""
+(() => {
+  if (window.__ddGota) return;
+  window.__ddGota = true;
+  const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  // Como un fluido: el borde de adelante se adelanta suave y el de atrás lo alcanza despacio, con un rebote pequeño
+  const ADELANTE = ["0.62s", "cubic-bezier(.22,.9,.32,1)"], ATRAS = ["0.98s", "cubic-bezier(.62,0,.24,1.1)"];
+
+  // Filtro de cristal: ondula lo que se ve detrás de los paneles, como a través de una gota (lo usa CSS_CRISTAL).
+  // Solo Chrome y Edge saben usar un filtro SVG en backdrop-filter; en los demás queda el cristal sin ondas.
+  if (!document.getElementById("dd-filtros")) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.id = "dd-filtros";
+    svg.setAttribute("width", "0"); svg.setAttribute("height", "0"); svg.setAttribute("aria-hidden", "true");
+    svg.style.position = "absolute";
+    svg.innerHTML = '<filter id="dd-cristal" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">'
+      + '<feTurbulence type="fractalNoise" baseFrequency="0.0045 0.008" numOctaves="3" seed="7" result="ondas"/>'
+      + '<feTurbulence type="turbulence" baseFrequency="0.018 0.026" numOctaves="1" seed="3" result="rizos"/>'
+      + '<feComposite in="ondas" in2="rizos" operator="arithmetic" k1="0" k2="0.78" k3="0.22" k4="0" result="mapa"/>'
+      + '<feGaussianBlur in="mapa" stdDeviation="1.2" result="suave"/>'
+      + '<feDisplacementMap in="SourceGraphic" in2="suave" scale="84" xChannelSelector="R" yChannelSelector="G" result="vb"/>'
+      + '<feDisplacementMap in="SourceGraphic" in2="suave" scale="94" xChannelSelector="R" yChannelSelector="G" result="r0"/>'
+      + '<feColorMatrix in="r0" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="rojo"/>'
+      + '<feColorMatrix in="vb" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="resto"/>'
+      + '<feBlend in="rojo" in2="resto" mode="screen"/></filter>';
+    document.body.appendChild(svg);
+  }
+  const marcas = (navigator.userAgentData && navigator.userAgentData.brands) || [];
+  if (marcas.some(m => /Chromium/.test(m.brand))) document.documentElement.setAttribute("data-cristal-refracta", "");
+
+  const botones = g => [...g.querySelectorAll('button[role="radio"]')];
+  const unaLinea = bs => bs.length > 1 && bs.every(b => Math.abs(b.offsetTop - bs[0].offsetTop) < 6);
+  function mide(g, b) {
+    const G = g.getBoundingClientRect(), B = b.getBoundingClientRect();
+    const bd = g.offsetWidth - g.clientWidth - g.clientLeft, bb = g.offsetHeight - g.clientHeight - g.clientTop;
+    return {l: B.left - G.left - g.clientLeft, r: G.right - B.right - bd, t: B.top - G.top - g.clientTop, b: G.bottom - B.bottom - bb};
+  }
+  function marca(g, b) {
+    botones(g).forEach(x => x.toggleAttribute("data-gota-activo", x === b));
+    g.__gotaEn = b;
+  }
+  function pon(g, b, salta) {
+    const m = mide(g, b), st = g.style, v = k => parseFloat(st.getPropertyValue(k));
+    const primera = isNaN(v("--gota-l"));
+    const cambia = primera || [["--gota-l", m.l], ["--gota-r", m.r], ["--gota-t", m.t], ["--gota-b", m.b]]
+      .some(([k, x]) => Math.abs(v(k) - x) > 1);
+    if (!cambia) { marca(g, b); return; }  // misma meta: no se toca la gota que va en camino
+    const brinco = primera || salta || quieto;
+    if (brinco) g.setAttribute("data-gota-quieto", "");
+    else {
+      const derecha = m.l > v("--gota-l");
+      const [tl, el] = derecha ? ATRAS : ADELANTE, [tr, er] = derecha ? ADELANTE : ATRAS;
+      st.setProperty("--gota-tl", tl); st.setProperty("--gota-el", el);
+      st.setProperty("--gota-tr", tr); st.setProperty("--gota-er", er);
+    }
+    st.setProperty("--gota-l", m.l + "px"); st.setProperty("--gota-r", m.r + "px");
+    st.setProperty("--gota-t", m.t + "px"); st.setProperty("--gota-b", m.b + "px");
+    marca(g, b);
+    if (brinco) requestAnimationFrame(() => requestAnimationFrame(() => g.removeAttribute("data-gota-quieto")));
+    else g.setAttribute("data-gota-mov", g.getAttribute("data-gota-mov") === "a" ? "b" : "a");
+  }
+  function revisa(salta) {
+    document.querySelectorAll('div[role="radiogroup"]').forEach(g => {
+      const bs = botones(g);
+      if (!unaLinea(bs)) {
+        if (g.hasAttribute("data-gota")) { g.removeAttribute("data-gota"); bs.forEach(x => x.removeAttribute("data-gota-activo")); }
+        return;
+      }
+      const marcado = bs.find(x => x.getAttribute("aria-checked") === "true");
+      const p = g.__gotaPend;
+      if (p && (p.b === marcado || !bs.includes(p.b) || performance.now() - p.t > 2500)) g.__gotaPend = null;
+      const meta = (g.__gotaPend && g.__gotaPend.b) || marcado;
+      const nuevo = !g.hasAttribute("data-gota");
+      g.setAttribute("data-gota", "");
+      if (meta) pon(g, meta, nuevo || salta);
+    });
+  }
+  let pendiente = false;
+  const luego = salta => { if (pendiente) return; pendiente = true;
+    requestAnimationFrame(() => { pendiente = false; revisa(salta); }); };
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest('button[role="radio"]');
+    const g = b && b.closest("[data-gota]");
+    if (!g || b.disabled) return;
+    g.__gotaPend = {b, t: performance.now()};
+    pon(g, b, false);
+  }, true);
+  new MutationObserver(() => luego(false)).observe(document.body,
+    {subtree: true, childList: true, attributes: true, attributeFilter: ["aria-checked"]});
+  addEventListener("resize", () => luego(true));
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => revisa(true));
+  revisa(true);
+})();
+"""
+
+# json.dumps no escapa "</": se escapa a mano para que el script del iframe no se corte en "</filter>"
+GOTA_HTML = ("<!doctype html><html><body><script>(() => { try {"
+             " const D = parent.document; if (parent === window || D.getElementById('dd-gota')) return;"
+             " const s = D.createElement('script'); s.id = 'dd-gota'; s.textContent = "
+             + json.dumps(GOTA_JS).replace("</", "<\\/") + ";"
+             " D.head.appendChild(s); } catch (e) {} })();</script></body></html>")
+
+
+# --- Vidrio cristal (opción escondida junto al idioma) ----------------------------------------------------
+# Los paneles casi no tienen relleno ni oscurecen el fondo: el relieve y la lluvia se ven a través y, en Chrome y
+# Edge, se ondulan como vistos a través de una gota (filtro #dd-cristal de GOTA_JS). Las letras llevan una sombra
+# para leerse sobre lo que se ve detrás.
+_PANELES = ('.dd-significa', '.dd-tarjeta', '.dd-resumen', '.dd-veredicto', '.dd-limites', '.dd-fuentes',
+            '[class*="st-key-evidencia"]', '.st-key-controles', '[data-testid="stPlotlyChart"]',
+            '[data-testid="stDeckGlJsonChart"]', '[data-testid="stExpander"] details',
+            '.st-key-vista div[role="radiogroup"]', 'p.dd-buscado')
+CSS_CRISTAL = ("<style>\n"
+               # Sin tinte: ni relleno azul ni saturación o brillo extra (eso volvía azulado lo de atrás); solo las ondas
+               # del filtro, un difuminado mínimo y los cantos blancos del cristal
+               ":root { --dd-capsula: linear-gradient(180deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.04) 55%, "
+               "rgba(255,255,255,0.08) 100%), rgba(255,255,255,0.03); }\n"
+               + ", ".join(_PANELES) + " {\n"
+               "  background: linear-gradient(165deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0) 35%) !important;\n"
+               "  -webkit-backdrop-filter: blur(1.5px) !important;\n"
+               "  backdrop-filter: blur(1.5px) !important;\n"
+               "  border-color: rgba(255,255,255,0.7) rgba(255,255,255,0.28) rgba(255,255,255,0.14) "
+               "rgba(255,255,255,0.4) !important;\n"
+               "  box-shadow: inset 1px 1px 0 rgba(255,255,255,0.5), inset -1px -1px 0 rgba(255,255,255,0.16), "
+               "inset 0 0 22px -10px rgba(255,255,255,0.22), 0 24px 50px -36px rgba(0,0,0,0.45) !important; }\n"
+               + ", ".join("html[data-cristal-refracta] " + x for x in _PANELES) + " {\n"
+               "  -webkit-backdrop-filter: url(#dd-cristal) blur(1px) !important;\n"
+               "  backdrop-filter: url(#dd-cristal) blur(1px) !important; }\n"
+               "[data-testid=\"stMain\"] { text-shadow: 0 1px 2px rgba(0,0,0,0.75), 0 0 14px rgba(0,0,0,0.45); }\n"
+               "button[role=\"radio\"][aria-checked=\"true\"], button[role=\"radio\"][aria-checked=\"true\"] *, "
+               "[data-gota-activo], [data-gota-activo] * { text-shadow: none; }\n"
+               "</style>")

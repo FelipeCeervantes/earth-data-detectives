@@ -12,23 +12,32 @@ import os
 import re
 import warnings
 
-import numpy as np
-import pandas as pd
-import plotly.graph_objects as go
 import streamlit as st
 
-from src import catalogo, contraste, datos, explicar, fondo, globo, indices, prediccion, region
 from src import estilo as E
+from src import fondo
 from src import textos as T
-from src.analisis import (anios_para_significancia, anomalias, cambio_total, mann_kendall, tendencia_ols,
-                          veredicto)
 
+# Primero se pinta la página (cielo, vidrio y fondo 3D) y después se importan las librerías de análisis, que
+# son las pesadas (scipy y statsmodels tardan unos segundos la primera vez que arranca el servidor).
 st.set_page_config(page_title=T.t("pagina.titulo", "en"), page_icon=":material/water_drop:", layout="wide",
                    initial_sidebar_state="collapsed")
 st.html(E.CSS)
+# Vidrio cristal: opción escondida junto al idioma (botón de la gota, al final de la página)
+st.html(E.CSS_CRISTAL if st.session_state.get("cristal") else "<style></style>")
 if fondo.html():
     with st.container(key="fondo3d"):
         st.iframe(fondo.html(), height=1)  # HTML hecho por la app (src/fondo.py); la CSS lo pone de fondo
+with st.container(key="gota"):
+    st.iframe(E.GOTA_HTML, height=1)  # la gota que se desliza entre botones (E.GOTA_JS); no se ve ni ocupa lugar
+
+import numpy as np  # noqa: E402
+import pandas as pd  # noqa: E402
+import plotly.graph_objects as go  # noqa: E402
+
+from src import catalogo, contraste, datos, explicar, globo, indices, prediccion, region  # noqa: E402
+from src.analisis import (anios_para_significancia, anomalias, cambio_total, mann_kendall,  # noqa: E402
+                          tendencia_ols, veredicto)
 
 ANIO_MIN, ANIO_MAX = 1981, 2024      # lo que hay en POWER mensual; se carga todo para calcular "lo normal"
 PERIODO_INICIAL = (2001, 2024)
@@ -45,7 +54,13 @@ UN_MES = 27 * 24 * 3600 * 1000       # ancho de una barra mensual, en milisegund
 
 
 # --- Datos (con caché) ---------------------------------------------------------------------
-@st.cache_data(show_spinner=False)
+# Todo lo que se calcula se guarda: al cambiar de sección, de zona o de variable y regresar, no se recalcula.
+# max_entries pone un tope para que la memoria no crezca sin fin en Streamlit Cloud (mover el periodo crea
+# muchas combinaciones).
+CACHE = dict(show_spinner=False, max_entries=200)
+
+
+@st.cache_data(**CACHE)
 def cargar(id_variable: str, id_zona: str) -> tuple[pd.Series, list[str]]:
     """Serie de la zona de 1981 a 2024 (para calcular "lo normal") y los avisos de src.datos."""
     with warnings.catch_warnings(record=True) as avisos:
@@ -62,7 +77,7 @@ def _clave_gemini() -> str | None:
     return clave or os.environ.get("GEMINI_API_KEY")
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(**CACHE)
 def calcular_resumen(id_zona: str, a0: int, a1: int, idioma: str, _clave: str | None) -> tuple[dict, dict, bool]:
     """Resultados ya calculados (src.explicar) y su resumen en palabras: con Gemini si hay clave, si no, plantillas."""
     lluvia, _ = cargar("precipitacion", id_zona)
@@ -73,7 +88,7 @@ def calcular_resumen(id_zona: str, a0: int, a1: int, idioma: str, _clave: str | 
     return r, (con_ia or explicar.resumen_sin_ia(r, idioma=idioma)), con_ia is not None
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(**CACHE)
 def tendencias_celdas(id_variable: str, id_zona: str, a0: int, a1: int) -> pd.DataFrame:
     """Tendencia por década en cada celda de POWER de la zona (para el mapa)."""
     filas = []
@@ -89,7 +104,7 @@ def tendencias_celdas(id_variable: str, id_zona: str, a0: int, a1: int) -> pd.Da
     return pd.DataFrame(filas)
 
 
-@st.cache_data(show_spinner=False)
+@st.cache_data(**CACHE)
 def sequia_celdas(id_zona: str, a0: int, a1: int) -> pd.DataFrame:
     """Meses en sequía (SPI-6 de −1 o menos) en cada celda de POWER de la zona, dentro del periodo."""
     filas = []
@@ -101,6 +116,51 @@ def sequia_celdas(id_zona: str, a0: int, a1: int) -> pd.DataFrame:
         filas.append({"lat": c["lat"], "lon": c["lon"], "peso": c["peso"],
                       "meses": int((spi <= contraste.UMBRAL_SPI).sum()), "total": int(len(spi))})
     return pd.DataFrame(filas)
+
+
+# Los cálculos de src.indices, src.analisis, src.contraste y src.prediccion, guardados por sus datos de entrada
+# (Streamlit reconoce una serie por su contenido): la misma serie y el mismo periodo no se calculan dos veces.
+@st.cache_data(**CACHE)
+def c_acumulados(lluvia: pd.Series) -> pd.DataFrame:
+    return indices.acumulados(lluvia)
+
+
+@st.cache_data(**CACHE)
+def c_spi(lluvia: pd.Series, escala: int) -> pd.Series:
+    return indices.spi(lluvia, escala)
+
+
+@st.cache_data(**CACHE)
+def c_estres(humedad: pd.Series) -> pd.Series:
+    return indices.estres_hidrico(humedad)
+
+
+@st.cache_data(**CACHE)
+def c_tendencia(anom: pd.Series) -> tuple[dict, dict]:
+    """Recta (OLS) y Mann-Kendall (Hamed-Rao) de una serie de anomalías."""
+    return tendencia_ols(anom), mann_kendall(anom, metodo="hamed_rao")
+
+
+@st.cache_data(**CACHE)
+def c_monitor(id_zona: str) -> pd.DataFrame:
+    return contraste.monitor(id_zona)
+
+
+@st.cache_data(**CACHE)
+def c_proyectar(serie: pd.Series, tipo: str, meta: int) -> dict:
+    return prediccion.proyectar(serie, tipo, meta)
+
+
+@st.cache_data(**CACHE)
+def c_probabilidad_sequia(spi: pd.Series) -> dict:
+    return prediccion.probabilidad_sequia(spi)
+
+
+@st.cache_data(show_spinner=False, max_entries=24)
+def pagina_globo(id_mapa: str, id_zona: str, a0: int, a1: int, idioma: str, u_mapa: str, _celdas_t: pd.DataFrame) -> str:
+    """HTML del globo (unos 90 KB): si no cambian variable, zona, periodo ni idioma, se reutiliza el mismo texto
+    y el navegador no vuelve a cargar el iframe. _celdas_t no entra en la clave: depende de los otros datos."""
+    return globo_3d(_celdas_t, id_mapa, u_mapa)
 
 
 # --- Encabezado e idioma -------------------------------------------------------------------
@@ -117,9 +177,15 @@ def tx(clave: str, **campos) -> str:
 def pie() -> None:
     """Fuentes y el botón EN/ES (se dibuja en cada corrida, también antes de un st.stop, para no perder el idioma)."""
     st.markdown(E.fuentes_html(tx("creditos"), idioma), unsafe_allow_html=True)
-    st.segmented_control("Language · Idioma", T.IDIOMAS, key="idioma", default=T.IDIOMA_INICIAL, required=True,
-                         format_func=str.upper, help="The app is in English; ES is for the team to review. · La app "
-                                                     "va en inglés; ES es para que el equipo revise.")
+    c_idioma, c_cristal = st.columns([6, 1], vertical_alignment="bottom")
+    with c_idioma:
+        st.segmented_control("Language · Idioma", T.IDIOMAS, key="idioma", default=T.IDIOMA_INICIAL, required=True,
+                             format_func=str.upper, help="The app is in English; ES is for the team to review. · La "
+                                                         "app va en inglés; ES es para que el equipo revise.")
+    with c_cristal:  # escondido a propósito: solo un ícono de gota
+        st.toggle(":material/water_drop:", key="cristal",
+                  help="Crystal glass: clear, see-through panels that bend the background like a water drop. · "
+                       "Vidrio cristal: paneles transparentes, sin tinte, que doblan el fondo como una gota.")
 
 
 # --- Utilidades de presentación ------------------------------------------------------------
@@ -191,7 +257,7 @@ def bloque_tendencia(serie: pd.Series, var: dict, a0: int, a1: int, clave: str) 
     u = var["unidades"]
     anom = anomalias(serie)
     try:
-        ols, mk = tendencia_ols(anom), mann_kendall(anom, metodo="hamed_rao")
+        ols, mk = c_tendencia(anom)
     except ValueError as e:
         st.warning(tx("error.tendencia", e=e))
         return
@@ -389,9 +455,9 @@ periodo = slice(f"{a0}-01-01", f"{a1}-12-01")
 def nivel_lluvia() -> str:
     """'mas', 'menos' o 'normal': la temporada de lluvias del periodo contra lo normal (1991–2020), para el fondo."""
     try:
-        acum = indices.acumulados(lluvia_toda.loc[periodo])
+        acum = c_acumulados(lluvia_toda.loc[periodo])
         temporada = acum.loc[acum["completo"], "temporada_mm"].mean()
-        normal = indices.acumulados(lluvia_toda.loc["1991-01-01":"2020-12-01"])["temporada_mm"].mean()
+        normal = c_acumulados(lluvia_toda.loc["1991-01-01":"2020-12-01"])["temporada_mm"].mean()
         razon = temporada / normal
     except Exception:
         return "normal"
@@ -422,7 +488,7 @@ if vista == "resumen":
         celdas_t = pd.DataFrame()
     if not celdas_t.empty:
         with st.container(key="globo"):
-            st.iframe(globo_3d(celdas_t, id_mapa, u_mapa), height=globo.ALTO)  # HTML hecho por la app (src/globo.py)
+            st.iframe(pagina_globo(id_mapa, id_zona, a0, a1, idioma, u_mapa, celdas_t), height=globo.ALTO)  # HTML hecho por la app (src/globo.py)
         celda_txt = celdas_t["lat"].map("{:.2f}".format) + ", " + celdas_t["lon"].map("{:.3f}".format)
         if es_sequia:
             st.markdown(E.leyenda_sequia_html(int(celdas_t["meses"].min()), int(celdas_t["meses"].max()), idioma),
@@ -492,8 +558,8 @@ elif vista == "lluvia":
     seccion("sec.lluvia")
     bloque_tendencia(lluvia, VAR_LLUVIA, a0, a1, "lluvia")
 
-    acum = indices.acumulados(lluvia)
-    normal = indices.acumulados(lluvia_toda.loc["1991-01-01":"2020-12-01"])["anual_mm"].mean()
+    acum = c_acumulados(lluvia)
+    normal = c_acumulados(lluvia_toda.loc["1991-01-01":"2020-12-01"])["anual_mm"].mean()
     st.markdown(f"##### {tx('lluvia.acum.titulo')}")
     fig = go.Figure([
         go.Bar(x=acum.index, y=acum["anual_mm"], name=tx("lluvia.acum.anual"), marker_color=E.rgba(E.NIEBLA, 0.45),
@@ -515,7 +581,7 @@ elif vista == "lluvia":
     escala = st.segmented_control(tx("sequia.indice"), [3, 6], key="escala_spi", default=6, required=True,
                                   format_func=lambda e: tx("sequia.formato", e=e))
     try:
-        spi_p = indices.spi(lluvia_toda, escala).loc[periodo]
+        spi_p = c_spi(lluvia_toda, escala).loc[periodo]
         grafica_indice(spi_p.dropna(), "spi", f"SPI-{escala}", "spi")
         evidencias_indice(indices.resumen_indice(spi_p, "spi", idioma=idioma), "sequia", tx("palabra.sequia"))
     except ValueError as e:
@@ -548,7 +614,7 @@ elif vista == "lluvia":
     explica(tx("est.intro"))
 
     st.markdown(f"##### {tx('msm.titulo')}")
-    msm = contraste.monitor(id_zona)
+    msm = c_monitor(id_zona)
     msm_p = msm.loc[periodo]
     comp_msm = contraste.comparar_sequia(spi_p, msm_p["fraccion_sequia"]) if spi_p is not None else None
     if comp_msm is None:
@@ -598,7 +664,7 @@ elif vista == "suelo":
 
     seccion("sec.estres")
     try:
-        z = indices.estres_hidrico(humedad).loc[periodo]
+        z = c_estres(humedad).loc[periodo]
         grafica_indice(z.dropna(), "estres", tx("estres.eje"), "estres")
         evidencias_indice(indices.resumen_indice(z, "estres", idioma=idioma), "estres", tx("palabra.deficit"))
     except Exception as e:
@@ -614,7 +680,7 @@ else:
     def bloque_futuro(serie: pd.Series, tipo: str, u: str, clave: str) -> None:
         """Valores anuales, su recta y la extensión hasta la meta con el rango de un solo año (95 %)."""
         try:
-            r = prediccion.proyectar(serie.loc[periodo], tipo, meta)
+            r = c_proyectar(serie.loc[periodo], tipo, meta)
         except ValueError:
             st.info(tx("fut.sin_datos"))
             return
@@ -656,7 +722,7 @@ else:
 
     seccion("sec.futuro_sequia")
     try:
-        ps = prediccion.probabilidad_sequia(indices.spi(lluvia_toda, 6).loc[periodo])
+        ps = c_probabilidad_sequia(c_spi(lluvia_toda, 6).loc[periodo])
     except ValueError:
         st.info(tx("fut.sin_datos"))
     else:

@@ -226,7 +226,7 @@ def test_css_sin_etiquetas_html_dentro():
 def test_fondo_3d_trae_el_relieve():
     from src import fondo
     pagina = fondo.html()
-    assert "three@0.160.0" in pagina and '"alturas":[[' in pagina and "prefers-reduced-motion" in pagina
+    assert "three@0.160.0" in pagina and '"alturas":"' in pagina and "prefers-reduced-motion" in pagina
 
 
 def test_mapa_distingue_las_celdas_con_tendencia_segura():

@@ -19,6 +19,7 @@ from src.indices import REFERENCIA, acumulados, estres_hidrico, resumen_indice, 
 
 # Modelo e instrucciones de la tarea manual 09 (compañero de Gemini, Google AI Studio).
 MODELO = os.environ.get("GEMINI_MODELO", "gemini-4-hydrogen")
+RESPALDO = "gemini-2.5-flash"   # si el modelo principal no responde (p. ej. HTTP 503, saturado)
 URL_GEMINI = "https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent"
 TIMEOUT_S = 30
 REINTENTOS = 2
@@ -354,6 +355,8 @@ def resumen_con_gemini(r: dict, clave: str | None = None, modelo: str = MODELO, 
         except (requests.RequestException, KeyError, IndexError, TypeError, ValueError) as e:
             ULTIMO_ERROR = type(e).__name__
     if salida is None:
+        if modelo != RESPALDO:
+            return resumen_con_gemini(r, clave, RESPALDO, idioma, pregunta)
         return None
     if not _es_valida(salida):
         ULTIMO_ERROR = "formato inválido"

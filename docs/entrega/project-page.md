@@ -1,20 +1,18 @@
-# Earth Data Detectives: Los Altos de Jalisco
+# TerraLens: Los Altos de Jalisco
 
 > Texts for the NASA Space Apps 2026 project page, ready to copy and paste. Every number comes from the app (NASA POWER, whole region, 2001–2024, normal = 1991–2020). Fields marked **[TO FILL]** are completed before submitting.
 
 **Challenge:** [TO FILL: the challenge title in English, exactly as it appears on the Space Apps site]
-**Team:** [TO FILL: team name and members, exactly as registered]
+**Team:** Capa 8, Tecnológico de Tlajomulco (Jalisco, Mexico). Members: [TO FILL: names exactly as registered]
 
-## Slogan (pick one)
-1. Is Los Altos running out of water? Ask the data.
-2. NASA data, plain words: rain and soil in Los Altos de Jalisco.
-3. Every month is a clue. Every trend gets a verdict.
+## Tagline
+Is your land drying out? Ask the data.
 
 ## High-level summary
-Los Altos de Jalisco, a highland region of 20 municipalities in western Mexico, depends on rain and soil moisture for its farms, dairy cattle and families. People there often ask whether the region is drying out, but the satellite and model data that could answer it are hard to find, process and interpret. Earth Data Detectives is a web app that turns NASA data into plain-language answers. You choose a zone (the whole region, Altos Norte or Altos Sur) and a period, and the app compares every month with the 1991–2020 normal. It tells you whether rainfall and soil moisture are changing, how much per decade, and whether the change is statistically significant. It also measures meteorological drought (SPI) and soil water stress, shows where change is strongest on a map, and ends with a short summary written by AI that may only use numbers the app has already calculated. Our goal is to democratize scientific information: anyone, expert or not, should be able to understand what is happening with the water where they live.
+Los Altos de Jalisco, a highland region of 20 municipalities in western Mexico, depends on rain and soil moisture for its farms, dairy cattle and families. People there often ask whether the region is drying out, but the satellite and model data that could answer it are hard to find, process and interpret. TerraLens is a web app that turns NASA data into plain-language answers. You choose a zone (the whole region, Altos Norte or Altos Sur) and a period, and the app compares every month with the 1991–2020 normal. It tells you whether rainfall and soil moisture are changing, how much per decade, and whether the change is statistically significant. It also measures meteorological drought (SPI) and soil water stress, shows where change is strongest on a map, and ends with a short summary written by AI that may only use numbers the app has already calculated. Our goal is to democratize scientific information: anyone, expert or not, should be able to understand what is happening with the water where they live.
 
 ## Project demo
-- Demo: [TO FILL: link to the 7 slides (PDF) or the 30-second video]
+- Demo: [TO FILL: public link to the 30-second video, `docs/entrega/video-30s.mp4`, for example YouTube (unlisted)]
 - Live app: https://earth-data-detectives.streamlit.app
 - Source code: https://github.com/FelipeCeervantes/earth-data-detectives
 
@@ -62,6 +60,7 @@ Python 3.12, Streamlit, pandas, NumPy, SciPy, statsmodels, pymannkendall, Plotly
 - **NASA data:** [NASA POWER](https://power.larc.nasa.gov/) monthly point data (community AG), parameters `PRECTOTCORR` (precipitation) and `GWETTOP`, `GWETROOT` and `GWETPROF` (surface, root-zone and profile soil wetness), 1981–2024. POWER is based on NASA's [MERRA-2](https://gmao.gsfc.nasa.gov/reanalysis/MERRA-2/) reanalysis. Each grid cell covers about 50 km, so results describe the region in general, not a single plot.
 - **Gemini (Google):** writes the final plain-language summary inside the app. It receives only the structured results that Python calculated, follows rules that forbid new numbers, causes and crop advice, and its answer is checked automatically: if it contains any number that is not in the results, it is discarded.
 - **Claude (Anthropic):** used by the team through Claude Code to write and test code, coordinate tasks and review each other's work. All statistics are computed by our tested Python code, not by AI.
+- **Demo video:** the narration voice was generated with Gemini text-to-speech (Google). The video was edited with AI assistance (Claude Code and HyperFrames) from screen recordings of the app. It carries a visible watermark, "AI-assisted video · AI-generated voice (Gemini)", and the same note is in the video file's metadata.
 - No NASA logos, flags or mission identifiers are used.
 
 ## References

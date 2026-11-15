@@ -41,28 +41,40 @@ html,body{margin:0;height:100%;overflow:hidden;background:transparent;color:#F3F
 body.listo #lienzo{opacity:1}
 #lienzo:active{cursor:grabbing}
 body.bloqueado #lienzo{pointer-events:none}
-.vidrio{background:rgba(9,34,66,.62);-webkit-backdrop-filter:blur(14px) saturate(150%);
-  backdrop-filter:blur(14px) saturate(150%);border:1px solid rgba(255,255,255,.2);color:#F3F8FD}
+/* Liquid glass, como en src/estilo.py: poco relleno, desenfoque fuerte, luz en el canto de arriba. El filtro
+   también oscurece lo de atrás (los municipios pueden ser naranja o azul claro) para que las letras se lean. */
+.vidrio{background:linear-gradient(180deg,rgba(255,255,255,.11),rgba(255,255,255,.02) 60%),rgba(9,34,66,.34);
+  -webkit-backdrop-filter:blur(18px) saturate(165%) brightness(.5);
+  backdrop-filter:blur(18px) saturate(165%) brightness(.5);border:1px solid;
+  border-color:rgba(255,255,255,.42) rgba(255,255,255,.17) rgba(255,255,255,.08) rgba(255,255,255,.17);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 16px 36px -20px rgba(0,8,20,.6);color:#F3F8FD}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.vidrio{background:rgba(9,34,66,.92)}}
 #barra{position:absolute;left:12px;bottom:12px;display:flex;flex-wrap:wrap;gap:8px;max-width:calc(100% - 24px)}
 button{font:inherit;font-weight:600;border-radius:999px;padding:8px 14px;cursor:pointer;line-height:1.2;
   transition:background .15s ease,transform .15s ease,box-shadow .15s ease}
-button:hover{background:rgba(92,200,255,.26);transform:translateY(-1px);box-shadow:0 8px 18px -10px rgba(0,0,0,.7)}
+button.vidrio{background:linear-gradient(180deg,rgba(255,255,255,.22),rgba(255,255,255,.07) 55%,rgba(173,224,255,.12)),
+  rgba(9,34,66,.34);box-shadow:inset 0 1px 0 rgba(255,255,255,.55),inset 0 -1px 0 rgba(92,200,255,.25),
+  0 8px 18px -12px rgba(0,12,32,.65)}
+button:hover{background:linear-gradient(180deg,rgba(255,255,255,.32),rgba(255,255,255,.11) 55%,rgba(173,224,255,.18)),
+  rgba(9,34,66,.34);transform:translateY(-1px);border-color:rgba(255,255,255,.6) rgba(255,255,255,.28) rgba(255,255,255,.14);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55),0 0 0 4px rgba(92,200,255,.14),0 12px 24px -14px rgba(0,12,32,.7)}
+button:active{transform:translateY(0) scale(.98)}
 button:focus-visible{outline:2px solid #5CC8FF;outline-offset:2px}
 button.redondo{width:36px;padding:8px 0;text-align:center}
 #explorar{position:absolute;right:12px;top:12px}
 body.bloqueado #explorar{right:auto;top:auto;left:50%;bottom:64px;transform:translateX(-50%);padding:11px 20px;
   background:rgba(92,200,255,.3);border-color:rgba(255,255,255,.45);box-shadow:0 0 0 6px rgba(92,200,255,.12)}
 #tarjeta{position:absolute;left:0;top:0;max-width:min(340px,calc(100% - 24px));border-radius:14px;padding:10px 12px;
-  pointer-events:none;box-shadow:0 14px 30px -14px rgba(0,0,0,.75);z-index:5}
+  pointer-events:none;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 22px 44px -22px rgba(0,8,20,.7);z-index:5}
 #tarjeta p{margin:0;line-height:1.4}
-#tarjeta .l0{color:#B6CBE2;font-size:12.5px}
+#tarjeta .l0{color:#DCE8F4;font-size:12.5px}
 #tarjeta .l1{font-family:'Outfit','Segoe UI',Arial,sans-serif;font-weight:500;font-size:16px;margin:2px 0}
 #tarjeta .l0:only-child{color:#F3F8FD;font-size:14px}
 #tarjeta .segura{color:#FFFFFF;font-weight:600}
-#tarjeta .extra{color:#B6CBE2;font-size:12.5px;margin-top:2px}
+#tarjeta .extra{color:#DCE8F4;font-size:12.5px;margin-top:2px}
 #tarjeta .titulo{font-family:'Outfit','Segoe UI',Arial,sans-serif;font-weight:500;font-size:17px;color:#FFD48A;
   margin:0 0 3px}
-#tarjeta .pista{color:#5CC8FF;font-size:12px;margin-top:5px}
+#tarjeta .pista{color:#8FDBFF;font-size:12px;margin-top:5px}
 body.tactil #tarjeta{left:12px !important;top:12px !important;right:120px;max-width:none}
 #aviso{position:absolute;inset:0;pointer-events:none;display:flex;align-items:center;justify-content:center;text-align:center;
   padding:24px;font-size:15px;line-height:1.5;color:#B6CBE2}
@@ -85,13 +97,14 @@ body.lejos .marca{visibility:visible;pointer-events:auto;cursor:pointer}
 #arriba{position:absolute;left:12px;top:12px;display:flex;flex-direction:column;gap:8px;
   width:min(340px,calc(100% - 24px));z-index:4}
 #buscador{font:inherit;border-radius:999px;padding:9px 15px;width:100%;box-sizing:border-box;outline:none}
-#buscador::placeholder{color:#B6CBE2}
+#buscador::placeholder{color:#DCE8F4}
 #buscador:focus{border-color:#5CC8FF;box-shadow:0 0 0 3px rgba(92,200,255,.28)}
 #info{position:absolute;right:12px;top:12px;width:min(320px,calc(100% - 24px));border-radius:16px;padding:12px 14px;
-  z-index:4;box-shadow:0 16px 34px -16px rgba(0,0,0,.8);border-color:rgba(255,212,138,.55)}
+  z-index:4;box-shadow:inset 0 1px 0 rgba(255,255,255,.3),0 24px 48px -24px rgba(0,8,20,.75);
+  border-color:rgba(255,212,138,.7) rgba(255,212,138,.4) rgba(255,212,138,.25) rgba(255,212,138,.4)}
 #info h3{margin:0 0 6px;font-family:'Outfit','Segoe UI',Arial,sans-serif;font-weight:500;font-size:19px;color:#FFD48A}
 #info p{margin:0 0 3px;line-height:1.45;font-size:13.5px}
-#info p.l0{color:#B6CBE2;font-size:12.5px}
+#info p.l0{color:#DCE8F4;font-size:12.5px}
 #info button{margin-top:8px;padding:6px 12px;font-size:12.5px}
 body.tactil #info{top:auto;bottom:64px}
 @media (prefers-reduced-motion: no-preference){#info:not([hidden]){animation:entra .35s ease-out both}}
@@ -459,6 +472,15 @@ body.tactil #info{top:auto;bottom:64px}
       const rad = Math.PI / 180, radio = tierra.geometry.parameters.radius;
       const geo = new tierra.geometry.constructor(radio * 1.0002, R.columnas - 1, R.filas - 1,
         (R.oeste + 180) * rad, (R.este - R.oeste) * rad, (90 - R.norte) * rad, (R.norte - R.sur) * rad);
+      if (typeof R.alturas === "string") {  // un byte por punto, en base64: metros = base + byte × paso
+        const b = atob(R.alturas), filas = [];
+        for (let i = 0; i < R.filas; i++) {
+          const fila = new Array(R.columnas);
+          for (let j = 0; j < R.columnas; j++) fila[j] = R.base + b.charCodeAt(i * R.columnas + j) * R.paso;
+          filas.push(fila);
+        }
+        R.alturas = filas;
+      }
       const H = R.alturas, n = R.filas * R.columnas, col = new Float32Array(n * 4);
       let min = Infinity, max = -Infinity;
       for (const fila of H) for (const m of fila) { if (m < min) min = m; if (m > max) max = m; }
@@ -597,13 +619,11 @@ def _contornos(id_zona: str) -> tuple[str, str]:
 
 @lru_cache(maxsize=1)
 def _relieve() -> str:
-    """Relieve de data/region/relieve.json (alturas en metros enteros). 'null' si falta."""
-    if not fondo.ARCHIVO_RELIEVE.exists():
+    """Relieve compacto de src.fondo (alturas en un byte por punto, base64), sin el contorno. 'null' si falta."""
+    r = fondo.relieve_compacto()
+    if r is None:
         return "null"
-    r = json.loads(fondo.ARCHIVO_RELIEVE.read_text(encoding="utf-8"))
-    return json.dumps({"oeste": r["oeste"], "sur": r["sur"], "este": r["este"], "norte": r["norte"],
-                       "filas": r["filas"], "columnas": r["columnas"], "exagera": 1100,
-                       "alturas": [[round(m) for m in fila] for fila in r["alturas"]]}, separators=(",", ":"))
+    return json.dumps({**{k: v for k, v in r.items() if k != "contorno"}, "exagera": 1100}, separators=(",", ":"))
 
 
 def encuadre(celdas: list[dict]) -> dict:

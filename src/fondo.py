@@ -10,6 +10,7 @@ queda el cielo de la CSS. En el celular o con "reducir movimiento" se dibuja un 
 
 from __future__ import annotations
 
+import base64
 import json
 from functools import lru_cache
 from pathlib import Path
@@ -22,7 +23,17 @@ _HTML = """<!doctype html><html><head><meta charset="utf-8">
 <script type="importmap">{"imports":{"three":"__THREE__"}}</script></head><body>
 <script type="module">
 import * as THREE from "three";
-const R = __RELIEVE__;
+const abre = r => {  // alturas: texto base64 con un byte por punto (metros = base + byte × paso)
+  const b = atob(r.alturas), H = [];
+  for (let i = 0; i < r.filas; i++) {
+    const fila = new Array(r.columnas);
+    for (let j = 0; j < r.columnas; j++) fila[j] = r.base + b.charCodeAt(i * r.columnas + j) * r.paso;
+    H.push(fila);
+  }
+  r.alturas = H;
+  return r;
+};
+const R = abre(__RELIEVE__);
 try {
   const quieto = matchMedia("(prefers-reduced-motion: reduce)").matches || innerWidth < 700;
   const renderer = new THREE.WebGLRenderer({antialias: true, alpha: true, powerPreference: "low-power"});
@@ -202,9 +213,27 @@ try {
 
 
 @lru_cache(maxsize=1)
-def html() -> str:
-    """Página del fondo 3D, con el relieve incrustado (unos 60 KB). Cadena vacía si falta el relieve."""
+def relieve_compacto() -> dict | None:
+    """El relieve con las alturas en un byte por punto (texto base64): pesa unos 15 KB en vez de 60.
+
+    metros = base + byte × paso (paso de unos 8 m: de sobra para dibujar). None si falta el archivo.
+    """
     if not ARCHIVO_RELIEVE.exists():
+        return None
+    r = json.loads(ARCHIVO_RELIEVE.read_text(encoding="utf-8"))
+    planas = [m for fila in r["alturas"] for m in fila]
+    base, tope = min(planas), max(planas)
+    paso = max((tope - base) / 255, 1e-9)
+    crudo = bytes(min(255, max(0, round((m - base) / paso))) for m in planas)
+    return {"oeste": r["oeste"], "sur": r["sur"], "este": r["este"], "norte": r["norte"], "filas": r["filas"],
+            "columnas": r["columnas"], "base": round(base, 1), "paso": round(paso, 4),
+            "alturas": base64.b64encode(crudo).decode("ascii"), "contorno": r["contorno"]}
+
+
+@lru_cache(maxsize=1)
+def html() -> str:
+    """Página del fondo 3D, con el relieve incrustado (unos 20 KB). Cadena vacía si falta el relieve."""
+    relieve = relieve_compacto()
+    if relieve is None:
         return ""
-    relieve = json.loads(ARCHIVO_RELIEVE.read_text(encoding="utf-8"))
     return _HTML.replace("__THREE__", THREE).replace("__RELIEVE__", json.dumps(relieve, separators=(",", ":")))

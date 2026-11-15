@@ -1,5 +1,6 @@
 """Pruebas del globo 3D (src/globo.py), del fondo que responde (src/fondo.py) y de sus piezas de estilo."""
 
+import base64
 import json
 import re
 
@@ -38,7 +39,8 @@ def test_el_html_trae_los_datos_de_python():
     assert d["estaciones"][0]["lineas"] == ["Rain gauge AJOJUCAR (TEOCALTICHE)"]
     assert d["textos"]["volver"] == "Back to Los Altos" and d["textos"]["explorar"] == "Tap to explore"
     assert len(d["municipios"]) == 20 and len(d["zona"]) >= 1
-    assert d["relieve"]["filas"] == len(d["relieve"]["alturas"])
+    alturas = base64.b64decode(d["relieve"]["alturas"])  # un byte por punto
+    assert len(alturas) == d["relieve"]["filas"] * d["relieve"]["columnas"]
     assert d["paso"] == {"lat": region.PASO_LAT, "lon": region.PASO_LON}
     assert "Loading the globe…" in pagina
 

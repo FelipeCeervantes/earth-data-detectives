@@ -132,6 +132,18 @@ def test_gemini_reintenta_sin_thinking_si_el_modelo_no_lo_acepta(res, monkeypatc
     assert llamadas == [True, False]
 
 
+def test_gemini_usa_el_modelo_de_respaldo_si_el_principal_esta_saturado(res, monkeypatch):
+    buena, urls = explicar.resumen_sin_ia(res), []
+
+    def post(url, json, timeout, headers):
+        urls.append(url)
+        return Respuesta(buena, 503 if explicar.MODELO in url else 200)
+
+    monkeypatch.setattr(explicar.requests, "post", post)
+    assert explicar.resumen_con_gemini(res, clave="x") == buena
+    assert explicar.RESPALDO in urls[-1] and explicar.MODELO in urls[0]
+
+
 def test_gemini_falla_la_red(res, monkeypatch):
     def caido(*a, **k):
         raise requests.ConnectionError("sin red")
