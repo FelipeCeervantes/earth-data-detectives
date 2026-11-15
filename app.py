@@ -309,7 +309,7 @@ def globo_3d(celdas_t: pd.DataFrame, id_mapa: str, u_mapa: str) -> str:
                   for _, s in contraste.estaciones(id_zona).iterrows()]
     textos = {k: tx(f"globo.{k}") for k in ("volver", "planeta", "explorar", "terminar", "acercar", "alejar",
                                              "sin_3d", "cargando", "creditos", "municipio", "lugar", "aria",
-                                             "buscar", "demo", "datos", "info", "cerrar", "clic")}
+                                             "buscar", "datos", "info", "cerrar", "clic")}
     return globo.html(id_zona, celdas, estaciones, textos, idioma, municipios=datos_municipios(celdas_t, id_mapa, u_mapa))
 
 

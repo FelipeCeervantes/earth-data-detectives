@@ -87,8 +87,6 @@ body.lejos .marca{visibility:visible;pointer-events:auto;cursor:pointer}
 #buscador{font:inherit;border-radius:999px;padding:9px 15px;width:100%;box-sizing:border-box;outline:none}
 #buscador::placeholder{color:#B6CBE2}
 #buscador:focus{border-color:#5CC8FF;box-shadow:0 0 0 3px rgba(92,200,255,.28)}
-#demo{margin:0;border-radius:12px;padding:7px 11px;font-size:12.5px;line-height:1.4;align-self:flex-start}
-#demo b{color:#FFD48A;font-family:'Outfit','Segoe UI',Arial,sans-serif;letter-spacing:.08em;margin-right:6px}
 #info{position:absolute;right:12px;top:12px;width:min(320px,calc(100% - 24px));border-radius:16px;padding:12px 14px;
   z-index:4;box-shadow:0 16px 34px -16px rgba(0,0,0,.8);border-color:rgba(255,212,138,.55)}
 #info h3{margin:0 0 6px;font-family:'Outfit','Segoe UI',Arial,sans-serif;font-weight:500;font-size:19px;color:#FFD48A}
@@ -99,11 +97,10 @@ body.tactil #info{top:auto;bottom:64px}
 @media (prefers-reduced-motion: no-preference){#info:not([hidden]){animation:entra .35s ease-out both}}
 @keyframes entra{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 [hidden]{display:none !important}
-@media (max-width:520px){#creditos{display:none}#barra{gap:6px}button{padding:8px 11px;font-size:13px}
-  #demo{display:none}}
+@media (max-width:520px){#creditos{display:none}#barra{gap:6px}button{padding:8px 11px;font-size:13px}}
 </style></head><body>
 <div id="lienzo"></div>
-<div id="arriba"><input id="buscador" class="vidrio" list="lista" type="search" autocomplete="off"><datalist id="lista"></datalist><p id="demo" class="vidrio"></p></div>
+<div id="arriba"><input id="buscador" class="vidrio" list="lista" type="search" autocomplete="off"><datalist id="lista"></datalist></div>
 <div id="info" class="vidrio" role="status" hidden></div>
 <div id="tarjeta" class="vidrio" role="status" hidden></div>
 <div id="aviso">__CARGANDO__</div>
@@ -122,7 +119,6 @@ body.tactil #info{top:auto;bottom:64px}
   el("acercar").setAttribute("aria-label", T.acercar); el("alejar").setAttribute("aria-label", T.alejar);
   el("creditos").textContent = T.creditos;
   el("buscador").placeholder = T.buscar; el("buscador").setAttribute("aria-label", T.buscar);
-  { const b = document.createElement("b"); b.textContent = "DEMO"; el("demo").append(b, T.demo); }
   for (const m of D.municipios) { const o = document.createElement("option"); o.value = m.nombre; el("lista").append(o); }
   const sinGlobo = () => {
     el("aviso").textContent = T.sin_3d; el("aviso").hidden = false;

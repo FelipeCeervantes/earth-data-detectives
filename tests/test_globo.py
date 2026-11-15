@@ -143,13 +143,13 @@ def test_estilo_del_globo_y_tarjetas_que_responden():
     assert "translateY(-3px)" in estilo.CSS and "(hover: hover)" in estilo.CSS
 
 
-def test_buscador_demo_y_panel_de_cada_municipio():
+def test_buscador_y_panel_de_cada_municipio_sin_aviso_demo():
     from src import globo
     celdas = [{"lat": 21.0, "lon": -102.5, "color": "#5CC8FF", "segura": True,
                "lineas": ["Cell 21.00, -102.500", "+1.20 mm/month per decade", "Significant"]}]
-    pagina = globo.html("altos-sur", celdas, [], {"buscar": "Find <x>", "demo": "Data loaded", "datos": "demo",
+    pagina = globo.html("altos-sur", celdas, [], {"buscar": "Find <x>", "datos": "Data loaded",
                                                   "info": "The cell over its centre:", "cerrar": "Show zone"}, "en")
-    assert 'id="buscador"' in pagina and 'list="lista"' in pagina and "DEMO" in pagina
+    assert 'id="buscador"' in pagina and 'list="lista"' in pagina and "DEMO" not in pagina and 'id="demo"' not in pagina
     escapado = "Find " + chr(92) + "u003cx" + chr(92) + "u003e"  # el texto viaja escapado
     assert escapado in pagina and "Find <x>" not in pagina
     assert '"lineas":["The cell over its centre:","+1.20 mm/month per decade","Significant"]' in pagina
