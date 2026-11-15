@@ -2,7 +2,8 @@
 
 Ejecutar:  streamlit run app.py
 Tres secciones (Panorama, Lluvia y sequía, Agua del suelo); en cada una va primero la gráfica o el mapa y abajo
-qué significa. Lo visual vive en src/estilo.py (y el fondo 3D en src/fondo.py) y los textos en src/textos.py
+qué significa. Lo visual vive en src/estilo.py (el fondo 3D en src/fondo.py y el globo en src/globo.py) y los
+textos en src/textos.py
 (t(clave, idioma)); esta app solo usa las funciones del contrato (tareas/contrato.md): region, catalogo, datos,
 indices, analisis, explicar y contraste.
 """
@@ -14,10 +15,9 @@ import warnings
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
-import pydeck as pdk
 import streamlit as st
 
-from src import catalogo, contraste, datos, explicar, fondo, indices, region
+from src import catalogo, contraste, datos, explicar, fondo, globo, indices, prediccion, region
 from src import estilo as E
 from src import textos as T
 from src.analisis import (anios_para_significancia, anomalias, cambio_total, mann_kendall, tendencia_ols,
@@ -35,10 +35,12 @@ PERIODO_INICIAL = (2001, 2024)
 MIN_ANIOS = 10                       # con menos años, una tendencia es puro ruido
 CAPAS = ("humedad_superficie", "humedad_raices", "humedad_perfil")
 CAPA_INICIAL = "humedad_raices"
-VISTAS = ("resumen", "lluvia", "suelo")
-ICONO_VISTA = {"resumen": ":material/travel_explore:", "lluvia": ":material/rainy:", "suelo": ":material/grass:"}
+VISTAS = ("resumen", "lluvia", "suelo", "futuro")
+ICONO_VISTA = {"resumen": ":material/travel_explore:", "lluvia": ":material/rainy:", "suelo": ":material/grass:",
+               "futuro": ":material/insights:"}
 SEGURAS = ("rojo", "verde")          # veredicto "sube" o "baja": las dos pruebas coinciden
 COLOR_DE = {"sube": "rojo", "baja": "verde", "no concluyente": "amarillo", "sin tendencia": "gris"}
+MAPA_SEQUIA = "sequia"               # tercera opción del globo: meses en sequía (SPI-6) de cada celda
 UN_MES = 27 * 24 * 3600 * 1000       # ancho de una barra mensual, en milisegundos (eje de fechas)
 
 
@@ -87,6 +89,20 @@ def tendencias_celdas(id_variable: str, id_zona: str, a0: int, a1: int) -> pd.Da
     return pd.DataFrame(filas)
 
 
+@st.cache_data(show_spinner=False)
+def sequia_celdas(id_zona: str, a0: int, a1: int) -> pd.DataFrame:
+    """Meses en sequía (SPI-6 de −1 o menos) en cada celda de POWER de la zona, dentro del periodo."""
+    filas = []
+    for c in region.celdas(id_zona):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            lluvia = datos.serie_punto("precipitacion", c["lat"], c["lon"], ANIO_MIN, ANIO_MAX)
+        spi = indices.spi(lluvia, 6).loc[f"{a0}":f"{a1}"].dropna()
+        filas.append({"lat": c["lat"], "lon": c["lon"], "peso": c["peso"],
+                      "meses": int((spi <= contraste.UMBRAL_SPI).sum()), "total": int(len(spi))})
+    return pd.DataFrame(filas)
+
+
 # --- Encabezado e idioma -------------------------------------------------------------------
 # El botón EN/ES va hasta abajo (es solo para que el equipo revise); aquí solo se lee lo elegido.
 idioma = st.session_state.get("idioma") or T.IDIOMA_INICIAL
@@ -129,6 +145,13 @@ def nombre_capa(id_capa: str) -> str:
     return tx(f"capa.{id_capa}")
 
 
+def nombre_mapa(opcion: str) -> str:
+    """Nombre de cada opción del globo: lluvia, humedad del suelo o meses en sequía."""
+    if opcion == MAPA_SEQUIA:
+        return tx("donde.sequia")
+    return tx("donde.lluvia") if opcion == "precipitacion" else nombre_capa(opcion)
+
+
 def seccion(clave: str) -> None:
     st.markdown(E.seccion_html(tx(clave)), unsafe_allow_html=True)
 
@@ -148,7 +171,7 @@ def limites(*partes: str) -> None:
 
 
 def grafica(fig: go.Figure, clave: str, alto: int) -> None:
-    fig.update_layout(template=E.PLANTILLA, height=alto, margin=dict(l=58, r=12, t=14, b=10))
+    fig.update_layout(template=E.PLANTILLA, height=alto, margin=dict(l=58, r=12, t=14, b=30))
     fig.update_xaxes(automargin=True)
     fig.update_yaxes(automargin=True, title_standoff=8)
     # theme=None: sin el tema de Streamlit, que ponía fondo oscuro y recortaba la leyenda de abajo
@@ -261,100 +284,65 @@ def evidencias_indice(res: dict, clave: str, palabra: str) -> None:
     ], clave)
 
 
-def municipios_zona(id_zona: str) -> list[dict]:
-    """Municipios de la zona con su contorno (INEGI), su centro y su caja, para resaltarlos y hacer zoom."""
-    salida = []
-    for f in region.contorno(id_zona)["features"]:
-        if f["properties"]["tipo"] != "municipio":
-            continue
-        g = f["geometry"]
-        anillo = max(([g["coordinates"]] if g["type"] == "Polygon" else g["coordinates"]), key=lambda p: len(p[0]))[0]
-        lons, lats = [p[0] for p in anillo], [p[1] for p in anillo]
-        salida.append({"nombre": f["properties"]["nombre"], "rasgo": f, "lon": float(np.mean(lons)),
-                       "lat": float(np.mean(lats)), "caja": (min(lons), min(lats), max(lons), max(lats))})
-    return salida
-
-
-def celda_del_centro(celdas_t: pd.DataFrame, lon: float, lat: float) -> pd.Series:
-    """La celda de POWER más cercana al centro de un municipio."""
-    return celdas_t.loc[((celdas_t["lon"] - lon) ** 2 + (celdas_t["lat"] - lat) ** 2).idxmin()]
-
-
-def mapa_3d(celdas_t: pd.DataFrame, maximo: float, u_mapa: str, buscado: dict | None) -> pdk.Deck:
-    """Mapa 3D con interacción completa y sin bloques: cada celda de POWER va plana, con relleno suave del color de
-    su cambio y un borde que brilla (más fuerte si la tendencia es segura). El municipio buscado se resalta y la
-    cámara hace zoom ahí."""
-    dl, dt = region.PASO_LON / 2, region.PASO_LAT / 2
-    celdas, bordes = [], []
-    for _, c in celdas_t.iterrows():
-        segura = c["color"] in SEGURAS
-        v = E.VEREDICTO[c["color"]]
-        color = E.rgb(E.color_cambio(c["pendiente"], maximo))
-        cuadro = [[c["lon"] - dl, c["lat"] - dt], [c["lon"] + dl, c["lat"] - dt],
-                  [c["lon"] + dl, c["lat"] + dt], [c["lon"] - dl, c["lat"] + dt]]
-        celdas.append({"poligono": cuadro, "relleno": color + [175 if segura else 125],
-                       "tip": (tx("donde.celda", lat=f"{c['lat']:.2f}", lon=f"{c['lon']:.3f}", peso=f"{c['peso']:.0%}")
-                               + "\n" + tx("donde.por_decada", pend=f"{c['pendiente']:+.2f}", u=u_mapa,
-                                           icono=v["icono"], palabra=E.palabra(c["color"], idioma))
-                               + "\n" + re.sub(r"</?b>", "", tx("donde.segura" if segura else "donde.no_segura")))})
-        camino = cuadro + [cuadro[0]]
-        bordes.append({"camino": camino, "halo": (([255, 255, 255] if segura else color) + [95 if segura else 60]),
-                       "ancho_halo": 14 if segura else 9, "linea": ([255, 255, 255, 255] if segura else color + [235]),
-                       "ancho": 3.2 if segura else 1.6})
-    contorno = region.contorno(id_zona)
-    zona_geo = {"type": "FeatureCollection", "features": [f for f in contorno["features"]
-                                                          if f["properties"]["tipo"] == "zona"]}
-    munis = municipios_zona(id_zona)
-    muni_geo = {"type": "FeatureCollection",  # cada municipio dice su nombre y que con un clic te acercas
-                "features": [{**m["rasgo"], "properties": {**m["rasgo"]["properties"],
-                                                           "tip": f"{m['nombre']}\n{tx('buscar.clic')}"}}
-                             for m in munis]}
-    estaciones = [{"lon": s["lon"], "lat": s["lat"],
-                   "tip": tx("donde.estacion", nombre=s["nombre"], municipio=s["municipio"])}
-                  for _, s in contraste.estaciones(id_zona).iterrows()]
-    pixeles = {"width_units": pdk.types.String("pixels"), "cap_rounded": True, "joint_rounded": True}
-    capas = [
-        pdk.Layer("PolygonLayer", celdas, get_polygon="poligono", filled=True, stroked=False,
-                  get_fill_color="relleno", pickable=True, auto_highlight=True, highlight_color=[255, 255, 255, 60]),
-        pdk.Layer("PathLayer", bordes, get_path="camino", get_color="halo", get_width="ancho_halo", **pixeles),
-        pdk.Layer("PathLayer", bordes, get_path="camino", get_color="linea", get_width="ancho", **pixeles),
-        pdk.Layer("GeoJsonLayer", muni_geo, id="municipios", stroked=True, filled=True,
-                  get_fill_color=[255, 255, 255, 0], get_line_color=[220, 235, 250, 120], line_width_min_pixels=1,
-                  pickable=True, auto_highlight=True, highlight_color=[255, 212, 138, 70]),
-        pdk.Layer("GeoJsonLayer", zona_geo, stroked=True, filled=False, get_line_color=E.rgb(E.BORDE_ZONA) + [70],
-                  line_width_min_pixels=10),
-        pdk.Layer("GeoJsonLayer", zona_geo, stroked=True, filled=False, get_line_color=E.rgb(E.BORDE_ZONA) + [255],
-                  line_width_min_pixels=2.5),
-    ]
-    if buscado:  # el municipio buscado: relleno ámbar suave, halo ancho y borde blanco
-        geo = {"type": "FeatureCollection", "features": [buscado["rasgo"]]}
-        capas += [
-            pdk.Layer("GeoJsonLayer", geo, stroked=True, filled=True, get_fill_color=E.rgb(E.BORDE_ZONA) + [70],
-                      get_line_color=E.rgb(E.BORDE_ZONA) + [120], line_width_min_pixels=16),
-            pdk.Layer("GeoJsonLayer", geo, stroked=True, filled=False, get_line_color=[255, 255, 255, 255],
-                      line_width_min_pixels=3.5),
-        ]
-    capas += [
-        pdk.Layer("ScatterplotLayer", estaciones, get_position=["lon", "lat"], get_radius=1500,
-                  radius_min_pixels=3, get_fill_color=[255, 255, 255, 240], stroked=True,
-                  get_line_color=E.rgb(E.CIELO_HONDO) + [255], line_width_min_pixels=1, pickable=True),
-    ]
-    if buscado:  # zoom al municipio: que su caja llene el mapa
-        o, s_, e, n = buscado["caja"]
-        zoom = float(np.clip(np.log2(360 / max(e - o, (n - s_) * 1.25)) - 0.55, 8.2, 10.8))
-        vista = pdk.ViewState(latitude=(s_ + n) / 2 - 0.04, longitude=(o + e) / 2, zoom=zoom, pitch=48, bearing=-12,
-                              transition_duration=1200)
+def globo_3d(celdas_t: pd.DataFrame, id_mapa: str, u_mapa: str) -> str:
+    """Página del globo (src.globo): cada celda con su color, si su tendencia es segura y los textos de su tarjeta."""
+    celdas = []
+    if id_mapa == MAPA_SEQUIA:
+        minimo, maximo = int(celdas_t["meses"].min()), int(celdas_t["meses"].max())
+        for _, c in celdas_t.iterrows():
+            celdas.append({
+                "lat": c["lat"], "lon": c["lon"], "color": E.color_sequia(c["meses"], minimo, maximo), "segura": False,
+                "lineas": [tx("donde.celda", lat=f"{c['lat']:.2f}", lon=f"{c['lon']:.3f}", peso=f"{c['peso']:.0%}"),
+                           tx("donde.meses_sequia", n=int(c["meses"]), total=int(c["total"]))]})
     else:
-        vista = pdk.ViewState(latitude=float(celdas_t["lat"].mean()) - 0.12, longitude=float(celdas_t["lon"].mean()),
-                              zoom=7.2 if id_zona == "los-altos" else 7.75, pitch=45, bearing=-12,
-                              transition_duration=1200)
-    # Interacción completa: arrastrar, girar e inclinar (botón derecho o Ctrl), acercar con la rueda o doble clic
-    return pdk.Deck(layers=capas, initial_view_state=vista, map_provider=None, map_style=None,
-                    views=[pdk.View(type="MapView", controller=True)],
-                    tooltip={"text": "{tip}", "style": {"backgroundColor": "rgba(6,26,51,0.94)", "color": E.NUBE,
-                                                         "fontFamily": E.PILA_TEXTO, "fontSize": "13px",
-                                                         "whiteSpace": "pre-line", "borderRadius": "12px",
-                                                         "padding": "8px 10px"}})
+        maximo = float(celdas_t["pendiente"].abs().max()) or 1.0
+        for _, c in celdas_t.iterrows():
+            segura = c["color"] in SEGURAS
+            celdas.append({
+                "lat": c["lat"], "lon": c["lon"], "color": E.color_cambio(c["pendiente"], maximo), "segura": segura,
+                "lineas": [tx("donde.celda", lat=f"{c['lat']:.2f}", lon=f"{c['lon']:.3f}", peso=f"{c['peso']:.0%}"),
+                           tx("donde.por_decada", pend=f"{c['pendiente']:+.2f}", u=u_mapa,
+                              icono=E.VEREDICTO[c["color"]]["icono"], palabra=E.palabra(c["color"], idioma)),
+                           re.sub(r"<[^>]+>", "", tx("donde.segura" if segura else "donde.no_segura"))]})
+    estaciones = [{"lat": s["lat"], "lon": s["lon"],
+                   "lineas": [tx("donde.estacion", nombre=s["nombre"], municipio=s["municipio"])]}
+                  for _, s in contraste.estaciones(id_zona).iterrows()]
+    textos = {k: tx(f"globo.{k}") for k in ("volver", "planeta", "explorar", "terminar", "acercar", "alejar",
+                                             "sin_3d", "cargando", "creditos", "municipio", "lugar", "aria",
+                                             "buscar", "demo", "datos", "info", "cerrar", "clic")}
+    return globo.html(id_zona, celdas, estaciones, textos, idioma, municipios=datos_municipios(celdas_t, id_mapa, u_mapa))
+
+
+def datos_municipios(celdas_t: pd.DataFrame, id_mapa: str, u_mapa: str) -> dict[str, dict]:
+    """Color y textos de cada municipio de la zona: el promedio de las celdas que lo cubren, pesado por su área.
+    Así el globo pinta municipios (lo que la gente reconoce) y las celdas quedan como una cuadrícula tenue."""
+    por_celda = {(round(c["lat"], 4), round(c["lon"], 4)): c for _, c in celdas_t.iterrows()}
+    salida = {}
+    for nombre in region.obtener_zona(id_zona)["municipios"]:
+        partes = [(w["peso"], por_celda[(w["lat"], w["lon"])]) for w in region.celdas_municipio(nombre)
+                  if (w["lat"], w["lon"]) in por_celda]
+        if not partes:
+            continue
+        total = sum(peso for peso, _ in partes)
+        principal = max(partes, key=lambda x: x[0])[1]  # la celda que cubre más de su área
+        if id_mapa == MAPA_SEQUIA:
+            meses = sum(peso * c["meses"] for peso, c in partes) / total
+            minimo, maximo = int(celdas_t["meses"].min()), int(celdas_t["meses"].max())
+            salida[nombre] = {"color": E.color_sequia(meses, minimo, maximo), "segura": False,
+                              "lineas": [tx("globo.promedio"),
+                                         tx("donde.meses_sequia", n=round(meses), total=int(principal["total"]))]}
+        else:
+            valor = sum(peso * c["pendiente"] for peso, c in partes) / total
+            segura = sum(peso for peso, c in partes if c["color"] in SEGURAS) / total >= 0.5
+            maximo = float(celdas_t["pendiente"].abs().max()) or 1.0
+            salida[nombre] = {
+                "color": E.color_cambio(valor, maximo), "segura": segura,
+                "lineas": [tx("globo.promedio"),
+                           tx("donde.por_decada", pend=f"{valor:+.2f}", u=u_mapa,
+                              icono=E.VEREDICTO[principal["color"]]["icono"],
+                              palabra=E.palabra(principal["color"], idioma)),
+                           re.sub(r"<[^>]+>", "", tx("donde.segura" if segura else "donde.no_segura"))]}
+    return salida
 
 
 # --- Controles: zona y periodo -------------------------------------------------------------
@@ -396,6 +384,22 @@ if any("Sin conexión" in a for a in avisos_ll + avisos_hu):
     st.warning(tx("aviso.sin_conexion"), icon=":material/inventory_2:")
     cargar.clear()  # la próxima vez se vuelve a intentar con NASA POWER
 periodo = slice(f"{a0}-01-01", f"{a1}-12-01")
+
+
+def nivel_lluvia() -> str:
+    """'mas', 'menos' o 'normal': la temporada de lluvias del periodo contra lo normal (1991–2020), para el fondo."""
+    try:
+        acum = indices.acumulados(lluvia_toda.loc[periodo])
+        temporada = acum.loc[acum["completo"], "temporada_mm"].mean()
+        normal = indices.acumulados(lluvia_toda.loc["1991-01-01":"2020-12-01"])["temporada_mm"].mean()
+        razon = temporada / normal
+    except Exception:
+        return "normal"
+    return "mas" if razon > 1.05 else "menos" if razon < 0.95 else "normal"
+
+
+# Señal invisible que lee el fondo 3D (src/fondo.py) para poner más o menos gotas
+st.markdown(f'<span class="dd-lluvia dd-lluvia--{nivel_lluvia()}" aria-hidden="true"></span>', unsafe_allow_html=True)
 VAR_LLUVIA = catalogo.obtener_variable("precipitacion", idioma)
 
 # --- Navegación: tres secciones; solo se dibuja la elegida (más rápido y bien medida en el celular) ----------
@@ -403,59 +407,42 @@ vista = st.segmented_control(tx("nav.etiqueta"), VISTAS, key="vista", default="r
                              format_func=lambda v: f"{ICONO_VISTA[v]} {tx(f'tab.{v}')}",
                              label_visibility="collapsed", width="stretch")
 
-# --- Panorama: el mapa 3D, y abajo lo que encontramos ----------------------------------------
+# --- Panorama: el planeta en 3D con la zona resaltada, y abajo lo que encontramos ---------------
 if vista == "resumen":
     seccion("sec.donde")
-    id_mapa = st.segmented_control(tx("donde.variable"), ("precipitacion", CAPA_INICIAL), key="var_mapa",
-                                   default="precipitacion", required=True,
-                                   format_func=lambda o: tx("donde.lluvia") if o == "precipitacion" else nombre_capa(o))
-    var_mapa = catalogo.obtener_variable(id_mapa, idioma)
-    u_mapa = var_mapa["unidades"]
+    id_mapa = st.segmented_control(tx("donde.variable"), ("precipitacion", CAPA_INICIAL, MAPA_SEQUIA), key="var_mapa",
+                                   default="precipitacion", required=True, format_func=nombre_mapa)
+    es_sequia = id_mapa == MAPA_SEQUIA
+    u_mapa = "" if es_sequia else catalogo.obtener_variable(id_mapa, idioma)["unidades"]
     try:
         with st.spinner(tx("spinner.celdas")):
-            celdas_t = tendencias_celdas(id_mapa, id_zona, a0, a1)
+            celdas_t = sequia_celdas(id_zona, a0, a1) if es_sequia else tendencias_celdas(id_mapa, id_zona, a0, a1)
     except Exception as e:
         st.error(tx("error.celdas", e=type(e).__name__))
         celdas_t = pd.DataFrame()
     if not celdas_t.empty:
-        maximo = float(celdas_t["pendiente"].abs().max()) or 1.0
-        munis = municipios_zona(id_zona)
-        nombres_munis = [m["nombre"] for m in munis]
-        # Clic en un municipio del mapa = buscarlo: se lee la selección del mapa anterior antes de dibujar el buscador.
-        # Solo cuenta una selección nueva (si no, borrar el buscador volvería a poner el municipio del último clic).
-        clave_previa = st.session_state.get("mapa3d_clave")
-        seleccion = (st.session_state.get(clave_previa) or {}).get("selection") or {} if clave_previa else {}
-        clic = (seleccion.get("objects") or {}).get("municipios") or []
-        if clic and (clave_previa, str(seleccion.get("indices"))) != st.session_state.get("mapa3d_aplicado"):
-            st.session_state["mapa3d_aplicado"] = (clave_previa, str(seleccion.get("indices")))
-            nombre_clic = (clic[0].get("properties") or {}).get("nombre")
-            if nombre_clic in nombres_munis:
-                st.session_state["buscar"] = nombre_clic
-        nombre_buscado = st.selectbox(tx("buscar.etiqueta"), nombres_munis, index=None, key="buscar",
-                                      placeholder=tx("buscar.placeholder"))
-        buscado = next((m for m in munis if m["nombre"] == nombre_buscado), None)
-        # La llave cambia con la zona y el municipio buscado: así el mapa se vuelve a crear y la cámara hace zoom ahí
-        clave_mapa = f"mapa3d_{id_zona}_{buscado['rasgo']['properties']['cvegeo'] if buscado else 'zona'}"
-        st.session_state["mapa3d_clave"] = clave_mapa
-        st.pydeck_chart(mapa_3d(celdas_t, maximo, u_mapa, buscado), height=560, key=clave_mapa,
-                        on_select="rerun", selection_mode="single-object")
-        if buscado:
-            c = celda_del_centro(celdas_t, buscado["lon"], buscado["lat"])
-            st.markdown(E.buscado_html(tx(
-                "buscar.resultado", nombre=buscado["nombre"], pend=f"{c['pendiente']:+.2f}", u=u_mapa,
-                icono=E.VEREDICTO[c["color"]]["icono"], palabra=E.palabra(c["color"], idioma),
-                segura=tx("tabla.si") if c["color"] in SEGURAS else tx("tabla.no"))), unsafe_allow_html=True)
-        seguras = int(celdas_t["color"].isin(SEGURAS).sum())
-        st.markdown(E.leyenda_mapa_html(maximo, u_mapa, seguras, len(celdas_t), idioma), unsafe_allow_html=True)
+        with st.container(key="globo"):
+            st.iframe(globo_3d(celdas_t, id_mapa, u_mapa), height=globo.ALTO)  # HTML hecho por la app (src/globo.py)
+        celda_txt = celdas_t["lat"].map("{:.2f}".format) + ", " + celdas_t["lon"].map("{:.3f}".format)
+        if es_sequia:
+            st.markdown(E.leyenda_sequia_html(int(celdas_t["meses"].min()), int(celdas_t["meses"].max()), idioma),
+                        unsafe_allow_html=True)
+            tabla = pd.DataFrame({tx("tabla.celda"): celda_txt, tx("tabla.zona"): (celdas_t["peso"] * 100).round(1),
+                                  tx("tabla.meses_sequia"): celdas_t["meses"],
+                                  tx("tabla.meses_total"): celdas_t["total"]})
+        else:
+            maximo = float(celdas_t["pendiente"].abs().max()) or 1.0
+            seguras = int(celdas_t["color"].isin(SEGURAS).sum())
+            st.markdown(E.leyenda_mapa_html(maximo, u_mapa, seguras, len(celdas_t), idioma), unsafe_allow_html=True)
+            tabla = pd.DataFrame({
+                tx("tabla.celda"): celda_txt,
+                tx("tabla.zona"): (celdas_t["peso"] * 100).round(1),
+                tx("tabla.cambio", u=u_mapa): celdas_t["pendiente"].round(2),
+                tx("tabla.veredicto"): celdas_t["color"].map(
+                    lambda c: f"{E.VEREDICTO[c]['icono']} {E.palabra(c, idioma)}"),
+                tx("tabla.segura"): celdas_t["color"].map(lambda c: tx("tabla.si") if c in SEGURAS else tx("tabla.no")),
+            })
         st.caption(tx("mapa.ayuda"))
-        col_cambio = tx("tabla.cambio", u=u_mapa)
-        tabla = pd.DataFrame({
-            tx("tabla.celda"): celdas_t["lat"].map("{:.2f}".format) + ", " + celdas_t["lon"].map("{:.3f}".format),
-            tx("tabla.zona"): (celdas_t["peso"] * 100).round(1),
-            col_cambio: celdas_t["pendiente"].round(2),
-            tx("tabla.veredicto"): celdas_t["color"].map(lambda c: f"{E.VEREDICTO[c]['icono']} {E.palabra(c, idioma)}"),
-            tx("tabla.segura"): celdas_t["color"].map(lambda c: tx("tabla.si") if c in SEGURAS else tx("tabla.no")),
-        })
         with st.expander(tx("tabla.ver")):
             st.dataframe(tabla, hide_index=True, width="stretch")
     significa("donde")
@@ -594,7 +581,7 @@ elif vista == "lluvia":
             tx("est.limite"), tx("msm.fuente"), tx("msm.limite"))
 
 # --- Agua del suelo ------------------------------------------------------------------------
-else:
+elif vista == "suelo":
     capa = st.segmented_control(tx("humedad.capa"), CAPAS, key="capa", default=CAPA_INICIAL, required=True,
                                 format_func=nombre_capa)
     try:
@@ -618,6 +605,98 @@ else:
         st.warning(tx("error.estres", e=e))
     significa("estres")
     limites(tx("fuente_power"), tx("limites.humedad"), tx("limites.estres"))
+
+# --- A futuro: si sigue la tendencia y qué tan seguido ha habido sequía (no es un pronóstico) ----------
+else:
+    meta = st.segmented_control(tx("fut.horizonte"), [2030, 2035], key="horizonte", default=2030, required=True)
+    st.caption(tx("fut.aviso", a0=a0, a1=a1))
+
+    def bloque_futuro(serie: pd.Series, tipo: str, u: str, clave: str) -> None:
+        """Valores anuales, su recta y la extensión hasta la meta con el rango de un solo año (95 %)."""
+        try:
+            r = prediccion.proyectar(serie.loc[periodo], tipo, meta)
+        except ValueError:
+            st.info(tx("fut.sin_datos"))
+            return
+        obs, fut, ajuste = r["observado"], r["futuro"], r["ajuste"]
+        decimales = 0 if tipo == "lluvia" else 1
+        fig = go.Figure([
+            go.Bar(x=obs.index, y=obs.values, name=tx("fut.observado"), marker_color=E.rgba(E.NIEBLA, 0.42),
+                   hovertemplate=f"%{{x}}: %{{y:.{decimales}f}} {u}<extra></extra>"),
+            go.Scatter(x=list(fut.index) + list(fut.index[::-1]), y=list(fut["alto"]) + list(fut["bajo"][::-1]),
+                       fill="toself", fillcolor=E.rgba(E.MAS_AGUA, 0.16), line=dict(width=0), name=tx("fut.banda"), mode="lines",
+                       hoverinfo="skip"),
+            go.Scatter(x=ajuste.index, y=ajuste.values, name=tx("fut.tendencia"), line=dict(color=E.MAS_AGUA, width=3),
+                       hoverinfo="skip"),
+            go.Scatter(x=[obs.index[-1], *fut.index], y=[ajuste.iloc[-1], *fut["media"]], name=tx("fut.proyeccion"),
+                       mode="lines+markers", marker=dict(size=5, color=E.NUBE), line=dict(color=E.NUBE, width=3, dash="dot"),
+                       hovertemplate=f"%{{x}}: %{{y:.{decimales}f}} {u}<extra></extra>"),
+        ])
+        fig.add_vrect(x0=obs.index[-1] + 0.5, x1=meta + 0.5, fillcolor="rgba(255,255,255,0.04)", line_width=0)
+        fig.add_annotation(x=(obs.index[-1] + 1 + meta) / 2, y=1, yref="paper", yanchor="top", showarrow=False,
+                           text=tx("fut.zona_futuro"), font=dict(family=E.PILA_TITULOS, size=12, color=E.NIEBLA))
+        fig.update_layout(yaxis_title=u, hovermode="x unified", bargap=0.25)
+        grafica(fig, clave, 360)
+        fila = fut.loc[meta]
+        diferencia = (f"{(fila['media'] / r['promedio'] - 1) * 100:+.0f} %" if tipo == "lluvia"
+                      else f"{fila['media'] - r['promedio']:+.1f} {tx('res.u_humedad')}")
+        evidencias([
+            (tx("fut.esperado.titulo", anio=meta), f"{fila['media']:.{decimales}f} {u}",
+             tx("fut.esperado.nota", lo=f"{fila['bajo']:.{decimales}f}", hi=f"{fila['alto']:.{decimales}f}", u=u),
+             tx("fut.esperado.ayuda")),
+            (tx("fut.pendiente.titulo"), f"{r['pendiente_decada']:+.{max(decimales, 1)}f} {u}",
+             tx("fut.pendiente.si" if r["p_valor"] < 0.05 else "fut.pendiente.no", p=p_texto(r["p_valor"])), ""),
+            (tx("fut.vs.titulo"), diferencia,
+             tx("fut.vs.nota", a0=obs.index[0], a1=obs.index[-1], prom=f"{r['promedio']:.{decimales}f}", u=u), ""),
+        ], clave)
+
+    seccion("sec.futuro_lluvia")
+    bloque_futuro(lluvia_toda, "lluvia", tx("fut.u_lluvia"), "futuro_lluvia")
+    significa("futuro_lluvia")
+
+    seccion("sec.futuro_sequia")
+    try:
+        ps = prediccion.probabilidad_sequia(indices.spi(lluvia_toda, 6).loc[periodo])
+    except ValueError:
+        st.info(tx("fut.sin_datos"))
+    else:
+        m = ps["minimos"]
+        niveles = [indices.categoria(float(v), "spi", idioma=idioma)["nivel"] for v in m]
+        ultimo = int(m.index.max())
+        fig = go.Figure(go.Bar(x=m.index, y=m.values, marker_color=[E.NIVEL[n]["color"] for n in niveles],
+                               hovertemplate="%{x}: SPI-6 %{y:+.2f}<extra></extra>", showlegend=False))
+        fig.add_hline(y=-1, line_dash="dash", line_color=E.NIVEL["moderado"]["color"], line_width=1.5,
+                      annotation_text=tx("fut.seq.umbral"), annotation_position="bottom left",
+                      annotation_font=dict(family=E.PILA_TITULOS, size=12, color=E.NIVEL["moderado"]["color"]))
+        fig.add_vrect(x0=ultimo + 0.5, x1=ultimo + 5.5, fillcolor=E.rgba(E.SECO, 0.10), line_width=0)
+        fig.add_annotation(x=ultimo + 3, y=2.2, showarrow=False, align="center",
+                           text=tx("fut.seq.ventana", pct=f"{ps['probabilidad'][5]:.0%}"),
+                           font=dict(family=E.PILA_TITULOS, size=13, color=E.SECO))
+        fig.update_layout(yaxis=dict(title=tx("fut.seq.eje"), range=[-3.2, 3.2], zeroline=True),
+                          xaxis=dict(range=[m.index.min() - 0.6, ultimo + 5.6]), bargap=0.2)
+        grafica(fig, "futuro_sequia", 340)
+        cada = ps["cada_cuantos_severa"]
+        if ps["p_tendencia"] is None or ps["p_tendencia"] >= 0.05:
+            frec_nota = tx("fut.seq.frec.no")
+        else:
+            frec_nota = tx("fut.seq.frec.mas" if ps["mas_frecuentes"] else "fut.seq.frec.menos",
+                           p=p_texto(ps["p_tendencia"]))
+        evidencias([
+            (tx("fut.seq.anios.titulo"), tx("fut.seq.anios.valor", n=ps["anios_sequia"], total=ps["anios"]),
+             tx("fut.seq.anios.nota", pct=f"{ps['p_anual']:.0%}"), ""),
+            (tx("fut.seq.prox.titulo", n=5), f"{ps['probabilidad'][5]:.0%}", tx("fut.seq.prox.nota"),
+             tx("fut.seq.prox.ayuda")),
+            (tx("fut.seq.severa.titulo", n=5), f"{ps['probabilidad_severa'][5]:.0%}",
+             tx("fut.seq.severa.nota", cada=f"{cada:.0f}") if cada else tx("fut.seq.severa.ninguna"), ""),
+            (tx("fut.seq.frec.titulo"), tx("fut.seq.frec.valor", antes=f"{ps['primera_mitad']:.0%}",
+                                           despues=f"{ps['segunda_mitad']:.0%}"), frec_nota, ""),
+        ], "futuro_sequia")
+    significa("futuro_sequia")
+
+    seccion("sec.futuro_suelo")
+    bloque_futuro(humedad_toda, "humedad", tx("fut.u_humedad"), "futuro_humedad")
+    significa("futuro_suelo")
+    limites(tx("fuente_power"), tx("limites.futuro"))
 
 # --- Fuentes -------------------------------------------------------------------------------
 pie()

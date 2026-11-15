@@ -90,3 +90,12 @@ def test_celda_de():
     assert region.celda_de(20.817, -102.763) == (21.0, -102.5)
     assert region.celda_de(21.357, -101.928) == (21.5, -101.875)
     assert not math.isnan(region.celda_de(0.24, 0.31)[0])
+
+
+def test_celdas_de_un_municipio_suman_uno_y_estan_en_la_zona():
+    from src import region
+    zona = {(c["lat"], c["lon"]) for c in region.celdas("los-altos")}
+    for nombre in ("Tepatitlán de Morelos", "Lagos de Moreno", "Villa Hidalgo"):
+        celdas = region.celdas_municipio(nombre)
+        assert abs(sum(c["peso"] for c in celdas) - 1) < 1e-9
+        assert {(c["lat"], c["lon"]) for c in celdas} <= zona

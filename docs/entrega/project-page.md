@@ -33,8 +33,9 @@ Los Altos de Jalisco, a highland region of 20 municipalities in western Mexico, 
 2. **Normal:** each month is compared with the same month in 1991–2020 (the World Meteorological Organization standard normal), which removes the seasonal cycle.
 3. **Meteorological drought:** the Standardized Precipitation Index (SPI-3 and SPI-6, McKee et al., 1993). **Soil water stress:** the standardized anomaly of soil moisture for each month. It does not directly measure crop stress.
 4. **Trends:** linear regression with a 95% confidence interval (autocorrelation-robust errors) and the Mann-Kendall test with Sen's slope, also in its seasonal form and with the Hamed-Rao correction. A trend is called "clear" only when both tests agree; otherwise the app says how many more years of data would be needed to be sure.
-5. **Checks on the ground:** Is the NASA data right on the ground? The app checks it against two Mexican sources from CONAGUA: the monthly records of 20 rain gauges of the National Weather Service (SMN) and Mexico's Drought Monitor, which rates each municipality from D0 to D4.
-6. **Summary:** Python builds a structured summary of the results and Gemini explains it in plain words, under strict rules: no new numbers, no causes, no crop advice.
+5. **Map and outlook:** a 3D globe flies to Los Altos and paints each municipality with the area-weighted change of the NASA POWER cells that cover it; search or click a municipality to fly there. The Outlook section extends the trend to 2030–2035 with its 95% range and gives the chance of a drought year in the next 5 years if the past repeats (it is not a forecast).
+6. **Checks on the ground:** Is the NASA data right on the ground? The app checks it against two Mexican sources from CONAGUA: the monthly records of 20 rain gauges of the National Weather Service (SMN) and Mexico's Drought Monitor, which rates each municipality from D0 to D4.
+7. **Summary:** Python builds a structured summary of the results and Gemini explains it in plain words, under strict rules: no new numbers, no causes, no crop advice.
 
 ### What we found (2001–2024)
 - **Rainfall:** about 652 mm per year in the whole region, with no clear trend yet: −3.04 mm per month per decade (95% CI −8.2 to 2.13). About 10 more years of data would tell us for sure.

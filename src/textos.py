@@ -136,9 +136,27 @@ TEXTOS: dict[str, dict[str, str]] = {
         "donde.por_decada": "{pend} {u} per decade · {icono} {palabra}",
         "donde.segura": "<b>Significant trend</b>: both tests agree",
         "donde.no_segura": "Trend not yet significant",
+        "donde.sequia": "Months in drought",
+        "donde.meses_sequia": "{n} of {total} months in drought (SPI-6 of −1 or less)",
+        "globo.volver": "Back to Los Altos", "globo.planeta": "See the whole planet",
+        "globo.explorar": "Tap to explore", "globo.terminar": "Done exploring",
+        "globo.acercar": "Zoom in", "globo.alejar": "Zoom out",
+        "globo.cargando": "Loading the globe…",
+        "globo.sin_3d": "This browser cannot draw the 3D globe. The table of cells below has the same numbers.",
+        "globo.creditos": "Earth image: NASA Visible Earth (Blue Marble) · Borders: INEGI · Rain gauges: CONAGUA",
+        "globo.municipio": "Municipality:", "globo.lugar": "Los Altos de Jalisco",
+        "globo.buscar": "Find a municipality and fly to it…",
+        "globo.demo": "Data loaded for Los Altos de Jalisco: 20 municipalities, 1981–2024.",
+        "globo.datos": "Data loaded · demo", "globo.info": "The NASA POWER cell over its centre:",
+        "globo.promedio": "Average of the NASA POWER cells that cover it (by area):",
+        "globo.cerrar": "Show the whole zone", "globo.clic": "Click to fly here",
+        "globo.aria": "3D globe of the Earth that flies to Los Altos de Jalisco: each NASA POWER cell is coloured by its change. The table of cells below has the same numbers.",
+        "leyenda.sequia_menos": "fewer months in drought ({n})", "leyenda.sequia_mas": "more months in drought ({n})",
+        "leyenda.sequia_nota": "Months with SPI-6 of −1 or less in the period, cell by cell. Here the edges do not mark a trend.",
+        "tabla.meses_sequia": "Months in drought", "tabla.meses_total": "Months with data",
         "leyenda.menos": "less water", "leyenda.mas": "more water", "leyenda.por_decada": "per decade",
-        "leyenda.segura": "Bright, white edge: significant trend", "leyenda.no_segura": "Faint: not yet significant",
-        "mapa.ayuda": "Each square is a NASA POWER cell of about 55 × 65 km: its colour shows the direction and size of the change, and a bright white edge marks a significant trend. Click a municipality to zoom in on it. Drag to move, scroll to zoom, right-drag (or Ctrl + drag) to tilt and turn. White dots are the CONAGUA rain gauges.",
+        "leyenda.segura": "Thick, glowing edge: significant trend", "leyenda.no_segura": "Thin edge: not yet significant",
+        "mapa.ayuda": "Each coloured square is a NASA POWER cell of about 55 × 65 km: its colour shows which way the water is going and how much. White dots are the CONAGUA rain gauges. Drag to turn the globe; point at a square (or tap it) to see its numbers. Type a municipality in the search box, or click it on the globe, to fly there.",
         "buscar.etiqueta": "Find a municipality", "buscar.placeholder": "Type a name, or click one on the map…",
         "buscar.clic": "Click to zoom in",
         "buscar.resultado": "{nombre}: the NASA POWER cell over its centre changes {pend} {u} per decade · {icono} {palabra}. Significant trend: {segura}.",
@@ -198,9 +216,10 @@ TEXTOS: dict[str, dict[str, str]] = {
             "Each month is compared with the same month in other years, so a dry April is not confused with a dry "
             "August."),
         "significa.donde": (
-            "The map shows how the water is changing in each piece of the region. The stronger the colour, the bigger "
-            "the change; blue means the trend is towards more water and orange towards less. The yellow line is "
-            "the border of the zone and the thin lines are the 20 municipalities (INEGI)."),
+            "The globe shows how the water is changing in each piece of the region. Read the colours and the edges: "
+            "blue means the trend is towards more water and orange towards less, and the stronger the colour, the "
+            "bigger the change. A thick, glowing edge marks the pieces where the trend is significant. The yellow "
+            "line is the border of the zone and the thin lines are its municipalities (INEGI)."),
         "no_es.sequia": "Little rain does not mean the soil is already dry or that crops are suffering: for that, "
                         "check the Soil water section.",
         "no_es.estres": "It does not directly measure crop stress: soil with little water does not prove that the "
@@ -249,6 +268,58 @@ TEXTOS: dict[str, dict[str, str]] = {
         "msm.limite": "The Monitor is an expert judgement that mixes several indices; ours only looks at rainfall, so "
                       "they should match often, not always.",
         "donde.estacion": "Rain gauge {nombre} ({municipio}) · CONAGUA SMN",
+        # A futuro (Outlook)
+        "tab.futuro": "Outlook",
+        "sec.futuro_lluvia": "Where is rainfall heading?",
+        "sec.futuro_sequia": "How likely is drought in the coming years?",
+        "sec.futuro_suelo": "Where is soil moisture heading?",
+        "fut.horizonte": "Look ahead to",
+        "fut.aviso": "This is not a weather forecast: nobody can say today which year will be dry. It shows what "
+                     "would happen if the trend continues and how often drought has happened, using {a0}–{a1}.",
+        "fut.sin_datos": "There are not enough complete years in this period to look ahead.",
+        "fut.observado": "Observed (complete years)", "fut.tendencia": "Trend line",
+        "fut.proyeccion": "If the trend continues", "fut.banda": "Range for a single year (95%)",
+        "fut.zona_futuro": "AHEAD",
+        "fut.u_lluvia": "mm/year", "fut.u_humedad": "% saturation",
+        "fut.esperado.titulo": "Around {anio}",
+        "fut.esperado.nota": "If the trend continues. A single year would likely fall between {lo} and {hi} {u}.",
+        "fut.esperado.ayuda": "The range is wide on purpose: rain changes a lot from one year to the next.",
+        "fut.pendiente.titulo": "Trend per decade",
+        "fut.pendiente.si": "Significant (p = {p}): unlikely to be chance.",
+        "fut.pendiente.no": "Not significant (p = {p}): the best guess stays close to the average.",
+        "fut.vs.titulo": "Compared with the average",
+        "fut.vs.nota": "Average {a0}–{a1}: {prom} {u}.",
+        "fut.seq.eje": "Driest month of each year (SPI-6)",
+        "fut.seq.umbral": "drought (−1)",
+        "fut.seq.ventana": "Next 5 years<br>{pct} chance of<br>a drought year",
+        "fut.seq.anios.titulo": "Years with drought", "fut.seq.anios.valor": "{n} of {total}",
+        "fut.seq.anios.nota": "{pct} of the years had at least one month at −1 or below.",
+        "fut.seq.prox.titulo": "Next {n} years",
+        "fut.seq.prox.nota": "Chance of at least one year with drought, if the past repeats.",
+        "fut.seq.prox.ayuda": "Calculated as 1 − (1 − p)ⁿ, with p = the share of past years with drought.",
+        "fut.seq.severa.titulo": "Severe drought, next {n} years",
+        "fut.seq.severa.nota": "In the past, about 1 year in {cada} had a month at −1.5 or below.",
+        "fut.seq.severa.ninguna": "No severe drought years in this period.",
+        "fut.seq.frec.titulo": "First half → second half",
+        "fut.seq.frec.valor": "{antes} → {despues}",
+        "fut.seq.frec.no": "Share of drought years. The change is not significant.",
+        "fut.seq.frec.mas": "Share of drought years: they are becoming more frequent (p = {p}).",
+        "fut.seq.frec.menos": "Share of drought years: they are becoming less frequent (p = {p}).",
+        "significa.futuro_lluvia": (
+            "Each bar is the rain of one year. The blue line is the trend and the dotted line continues it into the "
+            "coming years; the shaded band is where a single year would fall 95 times out of 100 if nothing else "
+            "changes. If the trend is not significant, the honest answer is: about the same as the average."),
+        "significa.futuro_sequia": (
+            "Each bar is the driest month of one year. Below −1 there was a meteorological drought. Counting how many "
+            "years had one gives the chance of having at least one in the next few years, if the climate keeps "
+            "behaving as it has."),
+        "no_es.futuro_sequia": "It is not a forecast: it does not say which year will be dry, only how likely it is "
+                               "that at least one will be.",
+        "significa.futuro_suelo": (
+            "The same idea for the water in the root zone (about 1 m deep): the yearly average, its trend and where "
+            "it would be if the trend continues, with the range for a single year."),
+        "limites.futuro": "A straight line cannot see El Niño, climate change or new water use: beyond a few years "
+                          "it is only a reference. These are statistical outlooks from past data, not forecasts.",
     },
     "es": {
         "pagina.titulo": "Detectives de Datos de la Tierra · Los Altos",
@@ -350,9 +421,27 @@ TEXTOS: dict[str, dict[str, str]] = {
         "donde.por_decada": "{pend} {u} por década · {icono} {palabra}",
         "donde.segura": "<b>Tendencia segura</b>: las dos pruebas coinciden",
         "donde.no_segura": "Tendencia todavía no segura",
+        "donde.sequia": "Meses en sequía",
+        "donde.meses_sequia": "{n} de {total} meses en sequía (SPI-6 de −1 o menos)",
+        "globo.volver": "Volver a Los Altos", "globo.planeta": "Ver todo el planeta",
+        "globo.explorar": "Toca para explorar", "globo.terminar": "Terminar de explorar",
+        "globo.acercar": "Acercar", "globo.alejar": "Alejar",
+        "globo.cargando": "Cargando el globo…",
+        "globo.sin_3d": "Este navegador no puede dibujar el globo 3D. La tabla de celdas de abajo tiene los mismos números.",
+        "globo.creditos": "Imagen de la Tierra: NASA Visible Earth (Blue Marble) · Límites: INEGI · Pluviómetros: CONAGUA",
+        "globo.municipio": "Municipio:", "globo.lugar": "Los Altos de Jalisco",
+        "globo.buscar": "Busca un municipio y vuela hasta él…",
+        "globo.demo": "Datos cargados para Los Altos de Jalisco: 20 municipios, 1981–2024.",
+        "globo.datos": "Datos cargados · demo", "globo.info": "La celda de NASA POWER sobre su centro:",
+        "globo.promedio": "Promedio de las celdas de NASA POWER que lo cubren (según su área):",
+        "globo.cerrar": "Ver toda la zona", "globo.clic": "Haz clic para volar aquí",
+        "globo.aria": "Globo 3D de la Tierra que vuela hasta Los Altos de Jalisco: cada celda de NASA POWER va coloreada según su cambio. La tabla de celdas de abajo tiene los mismos números.",
+        "leyenda.sequia_menos": "menos meses en sequía ({n})", "leyenda.sequia_mas": "más meses en sequía ({n})",
+        "leyenda.sequia_nota": "Meses con SPI-6 de −1 o menos en el periodo, celda por celda. Aquí los bordes no marcan una tendencia.",
+        "tabla.meses_sequia": "Meses en sequía", "tabla.meses_total": "Meses con dato",
         "leyenda.menos": "menos agua", "leyenda.mas": "más agua", "leyenda.por_decada": "por década",
-        "leyenda.segura": "Brillante y con borde blanco: tendencia segura", "leyenda.no_segura": "Tenue: todavía no segura",
-        "mapa.ayuda": "Cada cuadro es una celda de NASA POWER de unos 55 × 65 km: su color dice hacia dónde va el cambio y qué tan grande es, y un borde blanco brillante marca una tendencia segura. Haz clic en un municipio para acercarte. Arrastra para moverlo, usa la rueda para acercar y arrastra con el botón derecho (o Ctrl) para inclinarlo y girarlo. Los puntos blancos son los pluviómetros de CONAGUA.",
+        "leyenda.segura": "Borde grueso y brillante: tendencia segura", "leyenda.no_segura": "Borde fino: todavía no segura",
+        "mapa.ayuda": "Cada cuadro de color es una celda de NASA POWER de unos 55 × 65 km: su color dice hacia dónde va el agua y cuánto. Los puntos blancos son los pluviómetros de CONAGUA. Arrastra para girar el globo; señala un cuadro (o tócalo) para ver sus números. Escribe un municipio en el buscador, o haz clic en él en el globo, para volar hasta allá.",
         "buscar.etiqueta": "Busca un municipio", "buscar.placeholder": "Escribe un nombre o haz clic en uno del mapa…",
         "buscar.clic": "Haz clic para acercarte",
         "buscar.resultado": "{nombre}: la celda de NASA POWER sobre su centro cambia {pend} {u} por década · {icono} {palabra}. Tendencia segura: {segura}.",
@@ -412,9 +501,10 @@ TEXTOS: dict[str, dict[str, str]] = {
             "déficit. Cada mes se compara con el mismo mes de otros años, así que un abril seco no se confunde con "
             "un agosto seco."),
         "significa.donde": (
-            "El mapa muestra cómo cambia el agua en cada pedazo de la región. Entre más intenso el color, más grande "
-            "el cambio; azul quiere decir que la tendencia va hacia más agua y naranja, hacia menos. La línea "
-            "amarilla es el borde de la zona y las líneas delgadas, los 20 municipios (INEGI)."),
+            "El globo muestra cómo cambia el agua en cada pedazo de la región. Fíjate en los colores y en los "
+            "bordes: azul quiere decir que la tendencia va hacia más agua y naranja, hacia menos, y entre más fuerte "
+            "el color, más grande el cambio. Un borde grueso y brillante marca los pedazos donde la tendencia es "
+            "segura. La línea amarilla es el borde de la zona y las líneas delgadas, sus municipios (INEGI)."),
         "no_es.sequia": "Que llueva poco no significa que el suelo ya esté seco ni que los cultivos sufran: para eso "
                         "revisa la sección Agua del suelo.",
         "no_es.estres": "No mide directamente el estrés de los cultivos: que el suelo tenga poca agua no prueba que "
@@ -465,6 +555,58 @@ TEXTOS: dict[str, dict[str, str]] = {
         "msm.limite": "El Monitor es un juicio de expertos que mezcla varios índices; el nuestro solo mira la lluvia, "
                       "así que deben coincidir seguido, no siempre.",
         "donde.estacion": "Pluviómetro {nombre} ({municipio}) · SMN de CONAGUA",
+        "tab.futuro": "A futuro",
+        "sec.futuro_lluvia": "¿Hacia dónde va la lluvia?",
+        "sec.futuro_sequia": "¿Qué tan probable es una sequía en los próximos años?",
+        "sec.futuro_suelo": "¿Hacia dónde va la humedad del suelo?",
+        "fut.horizonte": "Mirar hasta",
+        "fut.aviso": "No es un pronóstico del tiempo: nadie puede decir hoy qué año será seco. Muestra qué pasaría "
+                     "si sigue la tendencia y qué tan seguido ha habido sequía, con {a0}–{a1}.",
+        "fut.sin_datos": "No hay suficientes años completos en este periodo para mirar a futuro.",
+        "fut.observado": "Observado (años completos)", "fut.tendencia": "Línea de tendencia",
+        "fut.proyeccion": "Si la tendencia sigue", "fut.banda": "Rango para un solo año (95 %)",
+        "fut.zona_futuro": "A FUTURO",
+        "fut.u_lluvia": "mm/año", "fut.u_humedad": "% de saturación",
+        "fut.esperado.titulo": "Hacia {anio}",
+        "fut.esperado.nota": "Si la tendencia sigue. Un solo año probablemente caería entre {lo} y {hi} {u}.",
+        "fut.esperado.ayuda": "El rango es ancho a propósito: la lluvia cambia mucho de un año a otro.",
+        "fut.pendiente.titulo": "Tendencia por década",
+        "fut.pendiente.si": "Segura (p = {p}): difícilmente es casualidad.",
+        "fut.pendiente.no": "No segura (p = {p}): lo más probable es algo parecido al promedio.",
+        "fut.vs.titulo": "Frente al promedio",
+        "fut.vs.nota": "Promedio {a0}–{a1}: {prom} {u}.",
+        "fut.seq.eje": "Mes más seco de cada año (SPI-6)",
+        "fut.seq.umbral": "sequía (−1)",
+        "fut.seq.ventana": "Próximos 5 años<br>{pct} de probabilidad<br>de un año con sequía",
+        "fut.seq.anios.titulo": "Años con sequía", "fut.seq.anios.valor": "{n} de {total}",
+        "fut.seq.anios.nota": "El {pct} de los años tuvo al menos un mes en −1 o menos.",
+        "fut.seq.prox.titulo": "Próximos {n} años",
+        "fut.seq.prox.nota": "Probabilidad de al menos un año con sequía, si el pasado se repite.",
+        "fut.seq.prox.ayuda": "Se calcula como 1 − (1 − p)ⁿ, con p = la parte de los años pasados con sequía.",
+        "fut.seq.severa.titulo": "Sequía severa, próximos {n} años",
+        "fut.seq.severa.nota": "En el pasado, más o menos 1 de cada {cada} años tuvo un mes en −1.5 o menos.",
+        "fut.seq.severa.ninguna": "No hubo años con sequía severa en este periodo.",
+        "fut.seq.frec.titulo": "Primera mitad → segunda mitad",
+        "fut.seq.frec.valor": "{antes} → {despues}",
+        "fut.seq.frec.no": "Parte de los años con sequía. El cambio no es seguro.",
+        "fut.seq.frec.mas": "Parte de los años con sequía: cada vez son más frecuentes (p = {p}).",
+        "fut.seq.frec.menos": "Parte de los años con sequía: cada vez son menos frecuentes (p = {p}).",
+        "significa.futuro_lluvia": (
+            "Cada barra es la lluvia de un año. La línea azul es la tendencia y la punteada la continúa en los "
+            "próximos años; la franja sombreada es donde caería un solo año 95 de cada 100 veces si nada más cambia. "
+            "Si la tendencia no es segura, la respuesta honesta es: más o menos lo mismo que el promedio."),
+        "significa.futuro_sequia": (
+            "Cada barra es el mes más seco de un año. Abajo de −1 hubo sequía meteorológica. Contar cuántos años la "
+            "tuvieron da la probabilidad de tener al menos uno en los próximos años, si el clima se sigue "
+            "comportando como hasta ahora."),
+        "no_es.futuro_sequia": "No es un pronóstico: no dice qué año será seco, solo qué tan probable es que al "
+                               "menos uno lo sea.",
+        "significa.futuro_suelo": (
+            "La misma idea para el agua de la zona de raíces (a 1 m de profundidad): el promedio de cada año, su "
+            "tendencia y dónde estaría si sigue, con el rango para un solo año."),
+        "limites.futuro": "Una línea recta no ve El Niño, el cambio climático ni nuevos usos del agua: más allá de "
+                          "unos años es solo una referencia. Son panoramas estadísticos con datos del pasado, no "
+                          "pronósticos.",
     },
 }
 

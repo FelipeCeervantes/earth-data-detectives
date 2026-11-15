@@ -104,7 +104,11 @@ def celda_de(lat: float, lon: float) -> tuple[float, float]:
 
 @lru_cache(maxsize=None)
 def _celdas(id_zona: str) -> tuple[tuple[float, float, float], ...]:
-    poligonos = _anillos(id_zona)
+    return _pesos(_anillos(id_zona))
+
+
+def _pesos(poligonos: list) -> tuple[tuple[float, float, float], ...]:
+    """Qué fracción del área de los polígonos cae en cada celda de POWER (muestreo en una malla fina)."""
     lons = [p[0] for pol in poligonos for p in pol[0]]
     lats = [p[1] for pol in poligonos for p in pol[0]]
     pesos: dict[tuple[float, float], float] = {}
@@ -127,3 +131,18 @@ def celdas(id_zona: str) -> list[dict]:
     """Celdas de POWER que cubren la zona: [{lat, lon, peso}], peso = fracción del área de la zona (suman 1)."""
     obtener_zona(id_zona)
     return [{"lat": la, "lon": lo, "peso": p} for la, lo, p in _celdas(id_zona)]
+
+
+@lru_cache(maxsize=None)
+def _celdas_municipio(nombre: str) -> tuple[tuple[float, float, float], ...]:
+    for f in contorno("los-altos")["features"]:
+        if f["properties"]["tipo"] == "municipio" and f["properties"]["nombre"] == nombre:
+            g = f["geometry"]
+            poligonos = [g["coordinates"]] if g["type"] == "Polygon" else g["coordinates"]
+            return _pesos([[[tuple(p[:2]) for p in anillo] for anillo in pol] for pol in poligonos])
+    raise ValueError(f"El municipio '{nombre}' no está en Los Altos.")
+
+
+def celdas_municipio(nombre: str) -> list[dict]:
+    """Celdas de POWER que cubren un municipio: [{lat, lon, peso}], peso = fracción de su área (suman 1)."""
+    return [{"lat": la, "lon": lo, "peso": p} for la, lo, p in _celdas_municipio(nombre)]

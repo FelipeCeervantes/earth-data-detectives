@@ -31,6 +31,9 @@ DUDA = "#C3B5FF"        # todavía no se sabe
 CALMA = "#A3B6CB"       # sin cambio
 NEUTRO = "#DCE8F4"      # centro de la escala del mapa
 BORDE_ZONA = "#FFD48A"  # contorno de la zona en el mapa y en el relieve
+SEQUIA_BAJA = "#FFE7A3"  # pocos meses en sequía (escala secuencial del globo)
+SEQUIA_ALTA = "#FF5C6C"  # muchos meses en sequía
+ALTO_GLOBO_CELULAR = 420  # px; el mismo valor que src/globo.py (ALTO_CELULAR)
 
 FUENTE_TITULOS = "Outfit"    # geométrica y amable: títulos y números grandes, como la temperatura de una app del clima
 FUENTE_TEXTO = "Figtree"     # sans cálida y muy legible para todo lo que se lee
@@ -279,8 +282,34 @@ p.dd-buscado { background: var(--dd-vidrio-fuerte); border: 1px solid var(--dd-v
 .dd-leyenda__barra { width: 11rem; max-width: 45vw; height: .7rem; border-radius: 999px;
   background: linear-gradient(90deg, $seco, $neutro, $agua); box-shadow: 0 0 16px -4px rgba(92,200,255,0.6); }
 .dd-leyenda__muestra { display: inline-block; width: 1.5rem; height: 1rem; border-radius: 5px; }
-.dd-leyenda__muestra--segura { background: $agua; border: 2px solid #FFFFFF; box-shadow: 0 0 12px -2px $agua; }
-.dd-leyenda__muestra--no { background: rgba(92,200,255,0.35); }
+.dd-leyenda__muestra--segura { background: rgba(92,200,255,0.45); border: 3px solid #FFFFFF;
+  box-shadow: 0 0 10px 1px rgba(255,255,255,0.7); }
+.dd-leyenda__muestra--no { background: rgba(92,200,255,0.3); border: 1px solid rgba(255,255,255,0.55); }
+.dd-leyenda__barra--sequia { background: linear-gradient(90deg, $sequia_baja, $sequia_alta);
+  box-shadow: 0 0 16px -4px rgba(255,140,66,0.6); }
+
+/* Señal invisible para la lluvia del fondo (src/fondo.py): no ocupa lugar */
+[data-testid="stElementContainer"]:has(.dd-lluvia) { display: none; }
+
+/* Globo 3D (src/globo.py): una ventana de vidrio grande, más ancha que el texto (hasta 1400 px) y casi del alto
+   de la pantalla; en el celular es más bajo */
+.st-key-globo { border-radius: var(--dd-radio); overflow: hidden; border: 1px solid var(--dd-vidrio-borde);
+  background: radial-gradient(120% 90% at 50% 40%, rgba(17,67,122,0.55), rgba(6,26,51,0.82));
+  box-shadow: var(--dd-sombra); width: min(calc(100vw - 2rem), 1400px) !important; max-width: none !important;
+  position: relative; left: 50%; transform: translateX(-50%); }
+/* El contenedor de Streamlit y el iframe miden lo mismo (si no, se corta la barra de botones de abajo) */
+.st-key-globo [data-testid="stElementContainer"] { height: clamp(540px, 82vh, 860px) !important;
+  flex: 0 0 auto !important; }
+.st-key-globo iframe { display: block; border: 0; height: 100% !important; }
+
+/* Tarjetas que responden: se levantan un poco al pasar el mouse (solo donde hay mouse) */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .dd-tarjeta, [class*="st-key-evidencia"], .dd-significa, .dd-resumen {
+    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+  .dd-tarjeta:hover, [class*="st-key-evidencia"]:hover, .dd-significa:hover, .dd-resumen:hover {
+    transform: translateY(-3px); border-color: rgba(255,255,255,0.3) !important;
+    box-shadow: 0 22px 44px -22px rgba(0,0,0,0.75), 0 0 0 1px rgba(92,200,255,0.12); }
+}
 
 /* Botones de descarga y expansores */
 [data-testid="stDownloadButton"] button { border-radius: 999px !important; background: var(--dd-vidrio-fuerte) !important;
@@ -308,15 +337,16 @@ p.dd-buscado { background: var(--dd-vidrio-fuerte); border: 1px solid var(--dd-v
   .st-key-vista [data-testid="stIconMaterial"] { display: none; }
   .dd-sello { white-space: normal; font-size: .92rem; }
   [data-testid="stPlotlyChart"] { padding: .6rem .2rem .2rem; }
-  /* En el celular el mapa 3D es una imagen: así el dedo baja la página en vez de girar el mapa */
-  [data-testid="stDeckGlJsonChart"], [data-testid="stDeckGlJsonChart"] * { pointer-events: none !important; }
+  /* El globo es más bajo en el celular (no atrapa el dedo: ver "Tap to explore" en src/globo.py) */
+  .st-key-globo [data-testid="stElementContainer"] { height: ${alto_celular}px !important; flex: 0 0 auto !important; }
 }
 """)
 
 CSS = "<style>" + _CSS.substitute(
     nube=NUBE, niebla=NIEBLA, tenue=TENUE, agua=AGUA, seco=SECO, neutro=NEUTRO, alto=CIELO_ALTO, hondo=CIELO_HONDO,
     cielo=CIELO, horizonte=HORIZONTE, vidrio=VIDRIO, vidrio_fuerte=VIDRIO_FUERTE, vidrio_borde=VIDRIO_BORDE,
-    pila_texto=PILA_TEXTO, pila_titulos=PILA_TITULOS,
+    pila_texto=PILA_TEXTO, pila_titulos=PILA_TITULOS, sequia_baja=SEQUIA_BAJA, sequia_alta=SEQUIA_ALTA,
+    alto_celular=ALTO_GLOBO_CELULAR,
 ) + "</style>"
 
 # --- Plantilla de Plotly -------------------------------------------------------------------
@@ -366,6 +396,14 @@ def color_cambio(valor: float, maximo: float) -> str:
     t = max(-1.0, min(1.0, valor / maximo))
     # Raíz cuadrada: los cambios chicos ya se distinguen del "sin cambio" (con escala lineal salían grises)
     return _mezcla(NEUTRO, MAS_AGUA if t > 0 else MENOS_AGUA, abs(t) ** 0.5)
+
+
+def color_sequia(valor: float, minimo: float, maximo: float) -> str:
+    """Escala secuencial del globo: amarillo = pocos meses en sequía, rojo = muchos (entre el mínimo y el máximo)."""
+    if valor is None or valor != valor:  # NaN
+        return CALMA
+    t = 0.5 if maximo <= minimo else max(0.0, min(1.0, (valor - minimo) / (maximo - minimo)))
+    return _mezcla(SEQUIA_BAJA, SEQUIA_ALTA, t)
 
 
 # --- Piezas HTML ---------------------------------------------------------------------------
@@ -455,3 +493,11 @@ def leyenda_mapa_html(maximo: float, unidades: str, seguras: int, total: int, id
             f'</span><span>{T.t("leyenda.segura", idioma)}</span><span class="dd-leyenda__muestra '
             f'dd-leyenda__muestra--no" aria-hidden="true"></span><span>{T.t("leyenda.no_segura", idioma)}</span>'
             f'<strong>{T.t("leyenda.cuenta", idioma, n=seguras, total=total)}</strong></div>')
+
+
+def leyenda_sequia_html(minimo: int, maximo: int, idioma: str = "es") -> str:
+    """Escala de color del globo cuando muestra los meses en sequía de cada celda."""
+    return (f'<div class="dd-leyenda"><span>{T.t("leyenda.sequia_menos", idioma, n=minimo)}</span>'
+            f'<span class="dd-leyenda__barra dd-leyenda__barra--sequia" aria-hidden="true"></span>'
+            f'<span>{T.t("leyenda.sequia_mas", idioma, n=maximo)}</span></div>'
+            f'<div class="dd-leyenda"><span>{T.t("leyenda.sequia_nota", idioma)}</span></div>')

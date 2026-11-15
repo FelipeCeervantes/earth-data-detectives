@@ -11,7 +11,7 @@ from streamlit.testing.v1 import AppTest
 from src import datos, explicar
 
 APP = str(Path(__file__).parent.parent / "app.py")
-SECCIONES = ["resumen", "lluvia", "suelo"]
+SECCIONES = ["resumen", "lluvia", "suelo", "futuro"]
 FECHAS = pd.date_range("1981-01-01", "2024-12-01", freq="MS")
 SERIE_ZONA_REAL = datos.serie_zona
 SERIE_PUNTO_REAL = datos.serie_punto
@@ -41,6 +41,11 @@ def falsos(monkeypatch):
                         raising=False)
 
 
+def globo_de(at: AppTest) -> str | None:
+    """HTML del globo 3D de Panorama (el otro iframe de la página es el fondo)."""
+    return next((e.proto.srcdoc for e in at.get("iframe") if "globe.gl" in e.proto.srcdoc), None)
+
+
 def correr(idioma: str = "es", vista: str = "resumen") -> AppTest:
     """Corre la app (abre en inglés), cambia de idioma con el botón de abajo si se pide y abre una sección.
 
@@ -67,7 +72,7 @@ def opciones(at: AppTest, clave: str) -> list[str]:
 def test_tres_secciones_y_nada_fuera_de_los_altos():
     at = correr()
     assert not at.exception
-    assert [o.split(":")[-1].strip() for o in opciones(at, "vista")] == ["Panorama", "Lluvia y sequía", "Agua del suelo"]
+    assert [o.split(":")[-1].strip() for o in opciones(at, "vista")] == ["Panorama", "Lluvia y sequía", "Agua del suelo", "A futuro"]
     assert at.segmented_control(key="vista").value == "resumen"
     assert opciones(at, "zona") == ["Toda la región", "Altos Norte", "Altos Sur"]
     assert at.segmented_control(key="zona").value == "los-altos"
@@ -83,14 +88,14 @@ def test_cada_seccion_muestra_primero_la_grafica_y_abajo_que_significa(vista):
     assert not at.exception
     contenido = textos(at.markdown)
     assert "¿Qué significa?" in contenido and "Fuente y limitaciones" in contenido
-    tipo = "deck_gl_json_chart" if vista == "resumen" else "plotly_chart"
-    assert at.get(tipo)
+    tipo = "iframe" if vista == "resumen" else "plotly_chart"
+    assert globo_de(at) if vista == "resumen" else at.get(tipo)
     # recorre la página en orden: la primera gráfica o mapa llega antes del primer "¿Qué significa?"
     orden = []
     pendientes = list(at.main.children.values())
     while pendientes:
         e = pendientes.pop(0)
-        if e.type == tipo:
+        if e.type == tipo and (tipo != "iframe" or "globe.gl" in e.proto.srcdoc):
             orden.append("grafica")
         elif e.type == "markdown" and "¿Qué significa?" in e.value:
             orden.append("significa")
@@ -101,7 +106,7 @@ def test_cada_seccion_muestra_primero_la_grafica_y_abajo_que_significa(vista):
 def test_resumen_con_mapa_tarjetas_y_texto_de_plantillas():
     at = correr()
     resumen = textos(at.markdown)
-    assert at.get("deck_gl_json_chart")
+    assert globo_de(at) and not at.get("deck_gl_json_chart")  # el globo reemplazó al mapa de bloques
     assert "dd-tarjetas" in resumen and "Sequía meteorológica (SPI-6)" in resumen
     assert "Resumen en palabras sencillas" in resumen
     assert "Escrito con plantillas" in resumen  # sin clave de Gemini
@@ -251,7 +256,7 @@ def test_abre_en_ingles():
     at = correr("en")
     assert not at.exception and not at.error
     assert at.segmented_control(key="idioma").value == "en"
-    assert [o.split(":")[-1].strip() for o in opciones(at, "vista")] == ["Overview", "Rain and drought", "Soil water"]
+    assert [o.split(":")[-1].strip() for o in opciones(at, "vista")] == ["Overview", "Rain and drought", "Soil water", "Outlook"]
     assert opciones(at, "zona") == ["Whole region", "Altos Norte", "Altos Sur"]
     todo = textos(at.markdown)
     assert "Case No. Los Altos · Rainfall and soil moisture · 2001–2024" in todo
@@ -297,13 +302,54 @@ def test_el_boton_cambia_todo_y_regresa():
     assert "Case No." in textos(at.markdown)
 
 
-def test_buscar_un_municipio_hace_zoom_y_lo_resalta_sin_bloques():
-    import json
-    at = correr()
-    mapa = json.loads(at.get("deck_gl_json_chart")[0].proto.json)
-    assert not any(c.get("extruded") for c in mapa["layers"])  # nada de bloques
-    at.selectbox(key="buscar").set_value("Tepatitlán de Morelos").run()
+def test_panorama_muestra_el_globo_con_los_datos_de_la_zona():
+    at = correr(idioma="en")
+    pagina = globo_de(at)
+    assert "Back to Los Altos" in pagina and "See the whole planet" in pagina and "Tap to explore" in pagina
+    assert "per decade" in pagina and "Rain gauge" in pagina and "of the zone" in pagina
+    assert "Arandas" in pagina and "Lagos de Moreno" in pagina
+    at.segmented_control(key="zona").set_value("altos-norte").run()
+    pagina = globo_de(at)
+    # Arandas (Altos Sur) solo va entre las otras zonas con datos, tenue; no se puede elegir en Altos Norte
+    assert "Lagos de Moreno" in pagina and pagina.index('"Arandas"') > pagina.index('"otros"')
     assert not at.exception
-    assert "Tepatitlán de Morelos: la celda de NASA POWER sobre su centro" in textos(at.markdown)
-    mapa = json.loads(at.get("deck_gl_json_chart")[0].proto.json)
-    assert mapa["initialViewState"]["zoom"] > 8
+
+
+def test_el_globo_cambia_con_la_variable_y_el_periodo():
+    at = correr()
+    lluvia = globo_de(at)
+    assert "Volver a Los Altos" in lluvia and "mm/mes por década" in lluvia
+    at.segmented_control(key="var_mapa").set_value("humedad_raices").run()
+    humedad = globo_de(at)
+    assert humedad != lluvia and "% de saturación por década" in humedad
+    at.slider(key="periodo").set_value((1990, 2010)).run()
+    assert globo_de(at) != humedad and not at.exception
+
+
+def test_globo_con_meses_en_sequia():
+    at = correr()
+    at.segmented_control(key="var_mapa").set_value("sequia").run()
+    assert not at.exception
+    assert "meses en sequía (SPI-6 de −1 o menos)" in globo_de(at)
+    contenido = textos(at.markdown)
+    assert "menos meses en sequía" in contenido and "dd-leyenda__barra--sequia" in contenido
+    tabla = at.dataframe[0].value
+    assert "Meses en sequía" in tabla.columns and (tabla["Meses en sequía"] <= tabla["Meses con dato"]).all()
+
+
+def test_la_pagina_avisa_al_fondo_cuanta_lluvia_dibujar():
+    at = correr()
+    assert any(f"dd-lluvia dd-lluvia--{nivel}" in textos(at.markdown) for nivel in ("mas", "menos", "normal"))
+
+
+def test_a_futuro_avisa_que_no_es_pronostico_y_da_probabilidades():
+    at = correr(vista="futuro")
+    assert not at.exception
+    contenido = textos(at.markdown) + textos(at.caption)
+    assert "No es un pronóstico del tiempo" in contenido and "No es un pronóstico" in contenido
+    etiquetas = [m.label for m in at.metric]
+    assert "Evidencia 01 · Hacia 2030" in etiquetas and "Evidencia 02 · Próximos 5 años" in etiquetas
+    probabilidad = next(m for m in at.metric if m.label == "Evidencia 02 · Próximos 5 años").value
+    assert probabilidad.endswith("%") and 0 <= int(probabilidad[:-1]) <= 100
+    at.segmented_control(key="horizonte").set_value(2035).run()
+    assert not at.exception and "Evidencia 01 · Hacia 2035" in [m.label for m in at.metric]

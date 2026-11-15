@@ -20,6 +20,7 @@ toolbarMode = "viewer"   # sin el botón "Deploy" ni menús de desarrollador
 
 [server]
 headless = true
+enableStaticServing = true   # sirve static/tierra.jpg (textura del globo 3D) en app/static/
 
 [browser]
 gatherUsageStats = false

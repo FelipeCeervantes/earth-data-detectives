@@ -21,5 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 Data: NASA POWER (MERRA-2), INEGI (municipal boundaries) and CONAGUA (rain gauges and
-Drought Monitor) keep their own terms;
+Drought Monitor) keep their own terms. static/: globe.gl (MIT License, Vasco Asturiano) and an Earth
+image from NASA Visible Earth (Blue Marble, public domain);
 see docs/entrega/project-page.md for credits.

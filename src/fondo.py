@@ -1,6 +1,9 @@
 """Fondo 3D: el relieve real de Los Altos (puntos de luz), su contorno y lluvia, con three.js.
 
-Se dibuja en un iframe (components.html) que la CSS de src/estilo.py fija detrás de todo el contenido.
+Se dibuja en un iframe (st.iframe) que la CSS de src/estilo.py fija detrás de todo el contenido. La lluvia
+tiene profundidad (tres capas y salpicaduras sobre el relieve), es más densa si la temporada del periodo elegido
+fue más lluviosa que lo normal (la app lo avisa con la clase .dd-lluvia) y el relieve responde con un parallax
+suave al mouse y al scroll.
 Los datos vienen de data/region/relieve.json (scripts/preparar_relieve.py). Si no hay WebGL, no pasa nada:
 queda el cielo de la CSS. En el celular o con "reducir movimiento" se dibuja un solo cuadro, sin animación.
 """
@@ -79,22 +82,54 @@ try {
   const contorno = new THREE.Line(new THREE.BufferGeometry().setFromPoints(borde.map(p => new THREE.Vector3(...p))),
     new THREE.LineBasicMaterial({color: 0xffd48a, transparent: true, opacity: 0.85}));
 
-  // Lluvia: gotas como trazos finos que caen y vuelven a empezar arriba
-  const N = 900, gotas = new Float32Array(N * 6), vel = new Float32Array(N);
-  const nueva = (k, arriba) => {
-    const x = (Math.random() - 0.5) * ancho * 1.3, z = (Math.random() - 0.5) * fondo * 1.3;
-    const y = arriba ? 9 + Math.random() * 3 : Math.random() * 12;
-    gotas.set([x, y, z, x - 0.05, y - 0.42, z], k * 6);
-    vel[k] = 5 + Math.random() * 3;
+  // Lluvia con profundidad: tres capas. Al fondo, gotas cortas, tenues y lentas; cerca, largas, claras y rápidas.
+  // n es el máximo (temporada más lluviosa que lo normal); con lluvia normal se dibuja el 70 %.
+  const sueloEn = (x, z) => alto(alturaEn(R.oeste + (x / ancho + 0.5) * (R.este - R.oeste),
+                                          R.norte - (z / fondo + 0.5) * (R.norte - R.sur)));
+  const capas = [{n: 520, largo: 0.24, vel: 3.2, op: 0.13}, {n: 430, largo: 0.42, vel: 5.4, op: 0.22},
+                 {n: 280, largo: 0.72, vel: 8.4, op: 0.34}].map((c, i) => {
+    const pos = new Float32Array(c.n * 6), vel = new Float32Array(c.n), suelo = new Float32Array(c.n);
+    const nueva = (k, arriba) => {
+      const x = (Math.random() - 0.5) * ancho * 1.3, z = (Math.random() - 0.5) * fondo * 1.3;
+      const y = arriba ? 9 + Math.random() * 3 : Math.random() * 12;
+      pos.set([x, y, z, x - c.largo * 0.12, y - c.largo, z], k * 6);
+      vel[k] = c.vel * (0.8 + Math.random() * 0.4);
+      suelo[k] = Math.abs(x) < ancho / 2 && Math.abs(z) < fondo / 2 ? sueloEn(x, z) : -0.5;  // -0.5: cae fuera del relieve
+    };
+    for (let k = 0; k < c.n; k++) nueva(k, false);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const obj = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color: 0xbfe6ff, transparent: true,
+      opacity: c.op, depthWrite: false}));
+    return {n: c.n, activas: c.n, pos, vel, suelo, nueva, geo, obj, salpica: i > 0};
+  });
+
+  // Salpicaduras: puntos de luz que se apagan donde una gota toca el relieve
+  const S = 80, sPos = new Float32Array(S * 3), sCol = new Float32Array(S * 3), sVida = new Float32Array(S);
+  let sSig = 0;
+  const geoS = new THREE.BufferGeometry();
+  geoS.setAttribute("position", new THREE.BufferAttribute(sPos, 3));
+  geoS.setAttribute("color", new THREE.BufferAttribute(sCol, 3));
+  const salpicaduras = new THREE.Points(geoS, new THREE.PointsMaterial({size: 0.17, vertexColors: true,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending}));
+  const salpica = (x, y, z) => { sPos.set([x, y + 0.04, z], sSig * 3); sVida[sSig] = 1; sSig = (sSig + 1) % S; };
+
+  // Más o menos lluvia según la temporada del periodo elegido: la app deja la señal en la clase .dd-lluvia
+  let densidad = 0;
+  const leeDensidad = () => {
+    let d = 1;
+    try {
+      const m = parent.document.querySelector(".dd-lluvia");
+      if (m) d = m.classList.contains("dd-lluvia--mas") ? 1.43 : m.classList.contains("dd-lluvia--menos") ? 0.6 : 1;
+    } catch (e) { /* sin acceso a la página: lluvia normal */ }
+    if (d === densidad) return;
+    densidad = d;
+    for (const c of capas) { c.activas = Math.min(c.n, Math.round(c.n * d * 0.7)); c.geo.setDrawRange(0, c.activas * 2); }
   };
-  for (let k = 0; k < N; k++) nueva(k, false);
-  const geoG = new THREE.BufferGeometry();
-  geoG.setAttribute("position", new THREE.BufferAttribute(gotas, 3));
-  const lluvia = new THREE.LineSegments(geoG, new THREE.LineBasicMaterial({color: 0xbfe6ff, transparent: true,
-    opacity: 0.22, depthWrite: false}));
+  leeDensidad();
 
   const grupo = new THREE.Group();
-  grupo.add(malla, puntos, contorno, lluvia);
+  grupo.add(malla, puntos, contorno, salpicaduras, ...capas.map(c => c.obj));
   escena.add(grupo);
 
   const encuadrar = () => {
@@ -108,19 +143,50 @@ try {
   encuadrar();
   addEventListener("resize", () => { encuadrar(); if (quieto) renderer.render(escena, camara); });
 
-  let antes = performance.now(), t = 0, corriendo = false;
+  // Parallax suave: el relieve responde al mouse (solo con mouse) y al scroll de la página
+  let mx = 0, my = 0, ms = 0, objX = 0, objY = 0, objS = 0;
+  try {
+    if (!quieto && parent !== window) {
+      const corta = new AbortController(), opciones = {passive: true, signal: corta.signal};
+      if (matchMedia("(pointer: fine)").matches) parent.addEventListener("mousemove", e => {
+        objX = e.clientX / parent.innerWidth - 0.5; objY = e.clientY / parent.innerHeight - 0.5;
+      }, opciones);
+      parent.document.addEventListener("scroll", e => {
+        const quien = e.target === parent.document ? parent.document.scrollingElement : e.target;
+        if (quien && quien.clientHeight > parent.innerHeight * 0.6) objS = Math.min(1, quien.scrollTop / 1800);
+      }, {...opciones, capture: true});
+      addEventListener("pagehide", () => corta.abort());
+    }
+  } catch (e) { /* sin acceso a la página: el fondo solo gira despacio */ }
+
+  let antes = performance.now(), t = 0, corriendo = false, revisar = 0;
   const cuadro = ahora => {
     if (document.hidden) { corriendo = false; return; }  // pestaña oculta: no gasta batería
     const dt = Math.min(0.05, (ahora - antes) / 1000);
     if (dt < 1 / 30) { requestAnimationFrame(cuadro); return; }  // unos 30 cuadros por segundo bastan
     antes = ahora; t += dt;
-    grupo.rotation.y = -0.38 + Math.sin(t * 0.045) * 0.22;
-    for (let k = 0; k < N; k++) {
-      const o = k * 6, d = vel[k] * dt;
-      gotas[o + 1] -= d; gotas[o + 4] -= d;
-      if (gotas[o + 4] < -0.5) nueva(k, true);
+    if (t > revisar) { revisar = t + 1; leeDensidad(); }
+    mx += (objX - mx) * 0.05; my += (objY - my) * 0.05; ms += (objS - ms) * 0.08;
+    grupo.rotation.y = -0.38 + Math.sin(t * 0.045) * 0.22 + mx * 0.12;
+    grupo.rotation.x = my * 0.05;
+    grupo.position.set(-mx * 0.9, ms * 1.8, 0);
+    for (const c of capas) {
+      for (let k = 0; k < c.activas; k++) {
+        const o = k * 6, d = c.vel[k] * dt;
+        c.pos[o + 1] -= d; c.pos[o + 4] -= d;
+        if (c.pos[o + 4] < c.suelo[k]) {
+          if (c.salpica && c.suelo[k] > -0.5 && Math.random() < 0.45) salpica(c.pos[o + 3], c.suelo[k], c.pos[o + 5]);
+          c.nueva(k, true);
+        }
+      }
+      c.geo.attributes.position.needsUpdate = true;
     }
-    geoG.attributes.position.needsUpdate = true;
+    for (let k = 0; k < S; k++) {
+      if (sVida[k] <= 0) continue;
+      sVida[k] = Math.max(0, sVida[k] - dt / 0.42);
+      sCol.set([0.55 * sVida[k], 0.8 * sVida[k], sVida[k]], k * 3);
+    }
+    geoS.attributes.position.needsUpdate = true; geoS.attributes.color.needsUpdate = true;
     renderer.render(escena, camara);
     requestAnimationFrame(cuadro);
   };
